@@ -211,13 +211,15 @@ export class ParkingSessionsService {
 
   /**
    * Check and update expired sessions (can be called by a cron job)
+   * Uses UTC for consistent timezone handling
    */
   async updateExpiredSessions(): Promise<number> {
+    const nowUtc = new Date();
     const result = await this.parkingSessionModel
       .updateMany(
         {
           status: ParkingSessionStatus.ACTIVE,
-          endTime: { $lt: new Date() },
+          endTime: { $lt: nowUtc },
         },
         { status: ParkingSessionStatus.EXPIRED },
       )
