@@ -48,8 +48,4 @@ export class CreateParkingSessionDto {
   @IsOptional()
   @IsEnum(ParkingSessionStatus)
   status?: ParkingSessionStatus;
-
-  @IsOptional()
-  @IsString()
-  ticketId?: string;
 }

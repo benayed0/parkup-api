@@ -29,15 +29,10 @@ export class ParkingSessionsService {
   async create(
     createDto: CreateParkingSessionDto,
   ): Promise<ParkingSessionDocument> {
-    // Generate ticket ID if not provided
-    const ticketId =
-      createDto.ticketId || `PKT-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
     const session = new this.parkingSessionModel({
       ...createDto,
       licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
       status: createDto.status || ParkingSessionStatus.ACTIVE,
-      ticketId,
     });
 
     return session.save();
