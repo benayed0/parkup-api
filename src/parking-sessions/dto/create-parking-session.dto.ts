@@ -17,19 +17,11 @@ export class CreateParkingSessionDto {
 
   @IsString()
   @IsNotEmpty()
-  vehicleId: string;
-
-  @IsString()
-  @IsNotEmpty()
-  zoneId: string;
+  meterId: string;
 
   @IsString()
   @IsNotEmpty()
   licensePlate: string;
-
-  @IsString()
-  @IsNotEmpty()
-  zoneName: string;
 
   @IsDateString()
   startTime: string;

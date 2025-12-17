@@ -4,6 +4,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ParkingSessionsModule } from './parking-sessions/parking-sessions.module';
+import { ParkingZonesModule } from './parking-zones/parking-zones.module';
+import { ParkingMetersModule } from './parking-meters/parking-meters.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -20,6 +22,8 @@ import { AuthModule } from './auth/auth.module';
       inject: [ConfigService],
     }),
     ParkingSessionsModule,
+    ParkingZonesModule,
+    ParkingMetersModule,
     UsersModule,
     AuthModule,
   ],

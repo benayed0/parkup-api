@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   ParkingSession,
   ParkingSessionDocument,
@@ -31,6 +31,7 @@ export class ParkingSessionsService {
   ): Promise<ParkingSessionDocument> {
     const session = new this.parkingSessionModel({
       ...createDto,
+      meterId: new Types.ObjectId(createDto.meterId),
       licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
       status: createDto.status || ParkingSessionStatus.ACTIVE,
     });
@@ -62,6 +63,7 @@ export class ParkingSessionsService {
 
     return this.parkingSessionModel
       .find(query)
+      .populate('meterId')
       .sort({ createdAt: -1 })
       .skip(filters?.skip || 0)
       .limit(filters?.limit || 50)
@@ -91,6 +93,7 @@ export class ParkingSessionsService {
         userId,
         status: ParkingSessionStatus.ACTIVE,
       })
+      .populate('meterId')
       .exec();
   }
 
@@ -105,14 +108,18 @@ export class ParkingSessionsService {
         licensePlate: licensePlate.toUpperCase().replace(/\s/g, ''),
         status: ParkingSessionStatus.ACTIVE,
       })
+      .populate('meterId')
       .exec();
   }
 
   /**
-   * Find a single session by ID
+   * Find a single session by ID (with populated meter)
    */
   async findOne(id: string): Promise<ParkingSessionDocument> {
-    const session = await this.parkingSessionModel.findById(id).exec();
+    const session = await this.parkingSessionModel
+      .findById(id)
+      .populate('meterId')
+      .exec();
     if (!session) {
       throw new NotFoundException(`Parking session #${id} not found`);
     }
@@ -236,6 +243,7 @@ export class ParkingSessionsService {
         userId,
         status: { $in: [ParkingSessionStatus.COMPLETED, ParkingSessionStatus.EXPIRED, ParkingSessionStatus.CANCELLED] },
       })
+      .populate('meterId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

@@ -15,17 +15,11 @@ export class ParkingSession {
   @Prop({ required: true, index: true })
   userId: string;
 
-  @Prop({ required: true })
-  vehicleId: string;
+  @Prop({ type: Types.ObjectId, ref: 'ParkingMeter', required: true, index: true })
+  meterId: Types.ObjectId;
 
-  @Prop({ required: true, index: true })
-  zoneId: string;
-
-  @Prop({ required: true, uppercase: true })
+  @Prop({ required: true, uppercase: true, index: true })
   licensePlate: string;
-
-  @Prop({ required: true })
-  zoneName: string;
 
   @Prop({ required: true })
   startTime: Date;
@@ -59,3 +53,4 @@ export const ParkingSessionSchema =
 ParkingSessionSchema.index({ userId: 1, status: 1 });
 ParkingSessionSchema.index({ userId: 1, createdAt: -1 });
 ParkingSessionSchema.index({ licensePlate: 1, status: 1 });
+ParkingSessionSchema.index({ meterId: 1, status: 1 });
