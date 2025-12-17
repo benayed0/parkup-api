@@ -21,7 +21,9 @@ import { ParkingSessionStatus } from './schemas/parking-session.schema';
 
 @Controller('parking-sessions')
 export class ParkingSessionsController {
-  constructor(private readonly parkingSessionsService: ParkingSessionsService) {}
+  constructor(
+    private readonly parkingSessionsService: ParkingSessionsService,
+  ) {}
 
   /**
    * Create a new parking session
@@ -68,7 +70,8 @@ export class ParkingSessionsController {
    */
   @Get('user/:userId/active')
   async findActiveByUser(@Param('userId') userId: string) {
-    const session = await this.parkingSessionsService.findActiveByUserId(userId);
+    const session =
+      await this.parkingSessionsService.findActiveByUserId(userId);
     return {
       success: true,
       data: session,
@@ -111,6 +114,7 @@ export class ParkingSessionsController {
       status,
       limit: limit ? parseInt(limit, 10) : undefined,
     });
+
     return {
       success: true,
       data: sessions,

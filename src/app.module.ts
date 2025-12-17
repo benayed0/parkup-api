@@ -6,8 +6,11 @@ import { AppService } from './app.service';
 import { ParkingSessionsModule } from './parking-sessions/parking-sessions.module';
 import { ParkingZonesModule } from './parking-zones/parking-zones.module';
 import { ParkingMetersModule } from './parking-meters/parking-meters.module';
+import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { TicketsModule } from './tickets/tickets.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -24,8 +27,11 @@ import { AuthModule } from './auth/auth.module';
     ParkingSessionsModule,
     ParkingZonesModule,
     ParkingMetersModule,
+    QrCodesModule,
     UsersModule,
     AuthModule,
+    TicketsModule,
+    AgentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

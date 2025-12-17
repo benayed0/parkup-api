@@ -190,25 +190,61 @@ export class AuthService {
 
   /**
    * Authenticate with Google
+   * Supports both idToken (mobile) and accessToken (web)
    */
-  async googleAuth(idToken: string): Promise<AuthResponse> {
+  async googleAuth(idToken?: string, accessToken?: string): Promise<AuthResponse> {
     try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken,
-        audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
-      });
+      let email: string;
 
-      const payload = ticket.getPayload();
+      if (idToken) {
+        // Mobile flow: verify idToken
+        const ticket = await this.googleClient.verifyIdToken({
+          idToken,
+          audience: this.configService.get<string>('GOOGLE_CLIENT_ID'),
+        });
 
-      if (!payload || !payload.email) {
+        const payload = ticket.getPayload();
+
+        if (!payload || !payload.email) {
+          throw new UnauthorizedException({
+            error: 'Invalid Google token',
+            code: 'INVALID_GOOGLE_TOKEN',
+          });
+        }
+
+        email = payload.email;
+      } else if (accessToken) {
+        // Web flow: verify accessToken via Google's userinfo endpoint
+        const response = await fetch(
+          `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`,
+        );
+
+        if (!response.ok) {
+          throw new UnauthorizedException({
+            error: 'Invalid Google access token',
+            code: 'INVALID_GOOGLE_TOKEN',
+          });
+        }
+
+        const userInfo = await response.json();
+
+        if (!userInfo.email) {
+          throw new UnauthorizedException({
+            error: 'No email in Google response',
+            code: 'INVALID_GOOGLE_TOKEN',
+          });
+        }
+
+        email = userInfo.email;
+      } else {
         throw new UnauthorizedException({
-          error: 'Invalid Google token',
+          error: 'No token provided',
           code: 'INVALID_GOOGLE_TOKEN',
         });
       }
 
       // Find or create user
-      const user = await this.usersService.findOrCreate(payload.email);
+      const user = await this.usersService.findOrCreate(email);
 
       // Mark email as verified (Google accounts are verified)
       if (!user.isEmailVerified) {

@@ -12,10 +12,21 @@ export enum ParkingSessionStatus {
 
 @Schema({ timestamps: true })
 export class ParkingSession {
-  @Prop({ required: true, index: true })
-  userId: string;
+  @Prop({
+    required: false,
 
-  @Prop({ type: Types.ObjectId, ref: 'ParkingMeter', required: true, index: true })
+    type: Types.ObjectId,
+    ref: 'User',
+    index: true,
+  })
+  userId?: Types.ObjectId;
+
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'ParkingMeter',
+    required: true,
+    index: true,
+  })
   meterId: Types.ObjectId;
 
   @Prop({ required: true, uppercase: true, index: true })

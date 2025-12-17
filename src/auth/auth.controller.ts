@@ -52,11 +52,12 @@ export class AuthController {
   /**
    * Authenticate with Google
    * POST /auth/google
+   * Supports both idToken (mobile) and accessToken (web)
    */
   @Post('google')
   @HttpCode(HttpStatus.OK)
   async googleAuth(@Body() dto: GoogleAuthDto) {
-    const result = await this.authService.googleAuth(dto.idToken);
+    const result = await this.authService.googleAuth(dto.idToken, dto.accessToken);
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,

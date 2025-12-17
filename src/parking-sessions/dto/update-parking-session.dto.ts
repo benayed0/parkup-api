@@ -11,6 +11,10 @@ import { ParkingSessionStatus } from '../schemas/parking-session.schema';
 
 export class UpdateParkingSessionDto {
   @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @IsOptional()
   @IsDateString()
   endTime?: string;
 

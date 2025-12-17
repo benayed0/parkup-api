@@ -11,9 +11,9 @@ import {
 import { ParkingSessionStatus } from '../schemas/parking-session.schema';
 
 export class CreateParkingSessionDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  userId: string;
+  userId?: string;
 
   @IsString()
   @IsNotEmpty()

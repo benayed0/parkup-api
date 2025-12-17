@@ -29,8 +29,14 @@ export class ParkingSessionsService {
   async create(
     createDto: CreateParkingSessionDto,
   ): Promise<ParkingSessionDocument> {
+    const userId = createDto.userId
+      ? Types.ObjectId.isValid(createDto.userId)
+        ? new Types.ObjectId(createDto.userId)
+        : undefined
+      : undefined;
     const session = new this.parkingSessionModel({
       ...createDto,
+      userId,
       meterId: new Types.ObjectId(createDto.meterId),
       licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
       status: createDto.status || ParkingSessionStatus.ACTIVE,
@@ -52,13 +58,15 @@ export class ParkingSessionsService {
     const query: Record<string, any> = {};
 
     if (filters?.userId) {
-      query.userId = filters.userId;
+      query.userId = new Types.ObjectId(filters.userId);
     }
     if (filters?.status) {
       query.status = filters.status;
     }
     if (filters?.licensePlate) {
-      query.licensePlate = filters.licensePlate.toUpperCase().replace(/\s/g, '');
+      query.licensePlate = filters.licensePlate
+        .toUpperCase()
+        .replace(/\s/g, '');
     }
 
     return this.parkingSessionModel
@@ -87,7 +95,9 @@ export class ParkingSessionsService {
   /**
    * Find active session for a user
    */
-  async findActiveByUserId(userId: string): Promise<ParkingSessionDocument | null> {
+  async findActiveByUserId(
+    userId: string,
+  ): Promise<ParkingSessionDocument | null> {
     return this.parkingSessionModel
       .findOne({
         userId,
@@ -133,6 +143,14 @@ export class ParkingSessionsService {
     id: string,
     updateDto: UpdateParkingSessionDto,
   ): Promise<ParkingSessionDocument> {
+    const userId = updateDto.userId
+      ? Types.ObjectId.isValid(updateDto.userId)
+        ? new Types.ObjectId(updateDto.userId)
+        : undefined
+      : undefined;
+    if (userId) {
+      (updateDto as any).userId = userId;
+    }
     const session = await this.parkingSessionModel
       .findByIdAndUpdate(id, updateDto, { new: true })
       .exec();
@@ -158,14 +176,17 @@ export class ParkingSessionsService {
     }
 
     const newEndTime = new Date(session.endTime);
-    newEndTime.setMinutes(newEndTime.getMinutes() + extendDto.additionalMinutes);
+    newEndTime.setMinutes(
+      newEndTime.getMinutes() + extendDto.additionalMinutes,
+    );
 
     const updatedSession = await this.parkingSessionModel
       .findByIdAndUpdate(
         id,
         {
           endTime: newEndTime,
-          durationMinutes: session.durationMinutes + extendDto.additionalMinutes,
+          durationMinutes:
+            session.durationMinutes + extendDto.additionalMinutes,
           amount: session.amount + extendDto.additionalAmount,
         },
         { new: true },
@@ -238,15 +259,23 @@ export class ParkingSessionsService {
     limit = 20,
     skip = 0,
   ): Promise<ParkingSessionDocument[]> {
-    return this.parkingSessionModel
+    const result = await this.parkingSessionModel
       .find({
         userId,
-        status: { $in: [ParkingSessionStatus.COMPLETED, ParkingSessionStatus.EXPIRED, ParkingSessionStatus.CANCELLED] },
+        status: {
+          $in: [
+            ParkingSessionStatus.COMPLETED,
+            ParkingSessionStatus.EXPIRED,
+            ParkingSessionStatus.CANCELLED,
+          ],
+        },
       })
       .populate('meterId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .exec();
+
+    return result;
   }
 }
