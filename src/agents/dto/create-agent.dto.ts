@@ -1,11 +1,11 @@
 import {
   IsString,
   IsNotEmpty,
-  IsEmail,
   IsOptional,
   IsArray,
   IsBoolean,
   MinLength,
+  Matches,
 } from 'class-validator';
 
 export class CreateAgentDto {
@@ -17,8 +17,13 @@ export class CreateAgentDto {
   @IsNotEmpty()
   name: string;
 
-  @IsEmail()
-  email: string;
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(3)
+  @Matches(/^[a-zA-Z0-9_.-]+$/, {
+    message: 'Username can only contain letters, numbers, dots, dashes and underscores',
+  })
+  username: string;
 
   @IsOptional()
   @IsString()

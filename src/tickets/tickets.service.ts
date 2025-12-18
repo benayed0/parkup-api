@@ -58,7 +58,10 @@ export class TicketsService {
     const ticket = new this.ticketModel({
       ...createDto,
       ticketNumber,
-      meterId: new Types.ObjectId(createDto.meterId),
+      position: {
+        type: 'Point',
+        coordinates: createDto.position.coordinates,
+      },
       parkingSessionId: createDto.parkingSessionId
         ? new Types.ObjectId(createDto.parkingSessionId)
         : undefined,
@@ -81,7 +84,6 @@ export class TicketsService {
     agentId?: string;
     status?: TicketStatus;
     licensePlate?: string;
-    meterId?: string;
     reason?: TicketReason;
     limit?: number;
     skip?: number;
@@ -102,16 +104,12 @@ export class TicketsService {
         .toUpperCase()
         .replace(/\s/g, '');
     }
-    if (filters?.meterId) {
-      query.meterId = new Types.ObjectId(filters.meterId);
-    }
     if (filters?.reason) {
       query.reason = filters.reason;
     }
 
     return this.ticketModel
       .find(query)
-      .populate('meterId')
       .populate('parkingSessionId')
       .populate('agentId')
       .sort({ issuedAt: -1 })
@@ -173,7 +171,6 @@ export class TicketsService {
         licensePlate: normalizedPlate,
         status: { $in: [TicketStatus.PENDING, TicketStatus.OVERDUE] },
       })
-      .populate('meterId')
       .exec();
   }
 
@@ -183,7 +180,6 @@ export class TicketsService {
   async findBySessionId(sessionId: string): Promise<TicketDocument[]> {
     return this.ticketModel
       .find({ parkingSessionId: new Types.ObjectId(sessionId) })
-      .populate('meterId')
       .exec();
   }
 
@@ -193,7 +189,6 @@ export class TicketsService {
   async findOne(id: string): Promise<TicketDocument> {
     const ticket = await this.ticketModel
       .findById(id)
-      .populate('meterId')
       .populate('parkingSessionId')
       .populate('userId')
       .populate('agentId')
@@ -211,7 +206,6 @@ export class TicketsService {
   async findByTicketNumber(ticketNumber: string): Promise<TicketDocument> {
     const ticket = await this.ticketModel
       .findOne({ ticketNumber: ticketNumber.toUpperCase() })
-      .populate('meterId')
       .populate('parkingSessionId')
       .populate('agentId')
       .exec();
@@ -223,6 +217,31 @@ export class TicketsService {
   }
 
   /**
+   * Find tickets near a location
+   */
+  async findNearby(
+    longitude: number,
+    latitude: number,
+    radiusMeters: number = 1000,
+    limit: number = 50,
+  ): Promise<TicketDocument[]> {
+    return this.ticketModel
+      .find({
+        position: {
+          $near: {
+            $geometry: {
+              type: 'Point',
+              coordinates: [longitude, latitude],
+            },
+            $maxDistance: radiusMeters,
+          },
+        },
+      })
+      .limit(limit)
+      .exec();
+  }
+
+  /**
    * Update a ticket
    */
   async update(
@@ -231,7 +250,6 @@ export class TicketsService {
   ): Promise<TicketDocument> {
     const ticket = await this.ticketModel
       .findByIdAndUpdate(id, updateDto, { new: true })
-      .populate('meterId')
       .exec();
 
     if (!ticket) {
@@ -265,7 +283,6 @@ export class TicketsService {
         },
         { new: true },
       )
-      .populate('meterId')
       .exec();
 
     return updatedTicket!;
@@ -302,7 +319,6 @@ export class TicketsService {
         },
         { new: true },
       )
-      .populate('meterId')
       .exec();
 
     return updatedTicket!;
@@ -324,7 +340,6 @@ export class TicketsService {
         { status: TicketStatus.DISMISSED },
         { new: true },
       )
-      .populate('meterId')
       .exec();
 
     return updatedTicket!;

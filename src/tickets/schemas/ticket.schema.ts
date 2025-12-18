@@ -24,6 +24,12 @@ export enum PaymentMethod {
   CASH = 'cash',
 }
 
+// GeoJSON Point type for position
+export class GeoJsonPoint {
+  type: string;
+  coordinates: number[];
+}
+
 @Schema({ timestamps: true })
 export class Ticket {
   @Prop({
@@ -35,12 +41,20 @@ export class Ticket {
   ticketNumber: string;
 
   @Prop({
-    type: Types.ObjectId,
-    ref: 'ParkingMeter',
-    required: true,
-    index: true,
+    type: {
+      type: String,
+      enum: ['Point'],
+      required: true,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
   })
-  meterId: Types.ObjectId;
+  position: GeoJsonPoint;
+
+  @Prop({ required: false })
+  address?: string;
 
   @Prop({
     type: Types.ObjectId,
@@ -120,10 +134,12 @@ export class Ticket {
 
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
 
+// Geospatial index for position
+TicketSchema.index({ position: '2dsphere' });
+
 // Compound indexes for common queries
 TicketSchema.index({ userId: 1, status: 1 });
 TicketSchema.index({ licensePlate: 1, status: 1 });
-TicketSchema.index({ meterId: 1, status: 1 });
 TicketSchema.index({ agentId: 1, issuedAt: -1 });
 TicketSchema.index({ issuedAt: -1 });
 TicketSchema.index({ dueDate: 1, status: 1 });

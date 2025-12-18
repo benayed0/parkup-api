@@ -22,7 +22,7 @@ export class Agent {
     lowercase: true,
     index: true,
   })
-  email: string;
+  username: string;
 
   @Prop({ required: false })
   phone?: string;
@@ -48,3 +48,4 @@ export const AgentSchema = SchemaFactory.createForClass(Agent);
 
 // Compound indexes
 AgentSchema.index({ isActive: 1, agentCode: 1 });
+AgentSchema.index({ isActive: 1, username: 1 });

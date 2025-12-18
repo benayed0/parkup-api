@@ -7,13 +7,35 @@ import {
   IsDateString,
   IsArray,
   Min,
+  ValidateNested,
+  IsIn,
+  ArrayMinSize,
+  ArrayMaxSize,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TicketReason } from '../schemas/ticket.schema';
 
-export class CreateTicketDto {
+// DTO for GeoJSON Point position
+export class PositionDto {
   @IsString()
-  @IsNotEmpty()
-  meterId: string;
+  @IsIn(['Point'])
+  type: string = 'Point';
+
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsNumber({}, { each: true })
+  coordinates: number[]; // [longitude, latitude]
+}
+
+export class CreateTicketDto {
+  @ValidateNested()
+  @Type(() => PositionDto)
+  position: PositionDto;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
 
   @IsOptional()
   @IsString()

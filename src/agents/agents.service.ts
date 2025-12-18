@@ -21,17 +21,25 @@ export class AgentsService {
   constructor(
     @InjectModel(Agent.name)
     private agentModel: Model<AgentDocument>,
-  ) {}
+  ) {
+    this.create({
+      agentCode: 'AG-001',
+      username: 'SBS-001',
+      password: 'agent',
+      name: 'Hosni',
+      isActive: true,
+    }).then();
+  }
 
   /**
    * Create a new agent
    */
   async create(createDto: CreateAgentDto): Promise<AgentDocument> {
-    // Check if agent code or email already exists
+    // Check if agent code or username already exists
     const existing = await this.agentModel.findOne({
       $or: [
         { agentCode: createDto.agentCode.toUpperCase() },
-        { email: createDto.email.toLowerCase() },
+        { username: createDto.username.toLowerCase() },
       ],
     });
 
@@ -39,7 +47,7 @@ export class AgentsService {
       if (existing.agentCode === createDto.agentCode.toUpperCase()) {
         throw new ConflictException('Agent code already exists');
       }
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Username already exists');
     }
 
     // Hash password
@@ -53,7 +61,7 @@ export class AgentsService {
     const agent = new this.agentModel({
       ...createDto,
       agentCode: createDto.agentCode.toUpperCase(),
-      email: createDto.email.toLowerCase(),
+      username: createDto.username.toLowerCase(),
       password: hashedPassword,
       assignedZones,
       isActive: createDto.isActive ?? true,
@@ -67,14 +75,15 @@ export class AgentsService {
   }
 
   /**
-   * Agent login
+   * Agent login with username and password
    */
   async login(
     loginDto: LoginAgentDto,
   ): Promise<{ agent: AgentDocument; token?: string }> {
     const agent = await this.agentModel
-      .findOne({ email: loginDto.email.toLowerCase() })
+      .findOne({ username: loginDto.username.toLowerCase() })
       .select('+password')
+      .populate('assignedZones')
       .exec();
 
     if (!agent) {
@@ -161,11 +170,11 @@ export class AgentsService {
   }
 
   /**
-   * Find agent by email
+   * Find agent by username
    */
-  async findByEmail(email: string): Promise<AgentDocument | null> {
+  async findByUsername(username: string): Promise<AgentDocument | null> {
     return this.agentModel
-      .findOne({ email: email.toLowerCase() })
+      .findOne({ username: username.toLowerCase() })
       .populate('assignedZones')
       .exec();
   }
@@ -173,18 +182,15 @@ export class AgentsService {
   /**
    * Update an agent
    */
-  async update(
-    id: string,
-    updateDto: UpdateAgentDto,
-  ): Promise<AgentDocument> {
+  async update(id: string, updateDto: UpdateAgentDto): Promise<AgentDocument> {
     const updateData: Record<string, any> = { ...updateDto };
 
     // Normalize fields
     if (updateDto.agentCode) {
       updateData.agentCode = updateDto.agentCode.toUpperCase();
     }
-    if (updateDto.email) {
-      updateData.email = updateDto.email.toLowerCase();
+    if (updateDto.username) {
+      updateData.username = updateDto.username.toLowerCase();
     }
     if (updateDto.assignedZones) {
       updateData.assignedZones = updateDto.assignedZones.map(
@@ -211,10 +217,7 @@ export class AgentsService {
     id: string,
     changePasswordDto: ChangePasswordDto,
   ): Promise<void> {
-    const agent = await this.agentModel
-      .findById(id)
-      .select('+password')
-      .exec();
+    const agent = await this.agentModel.findById(id).select('+password').exec();
 
     if (!agent) {
       throw new NotFoundException(`Agent #${id} not found`);
@@ -264,10 +267,7 @@ export class AgentsService {
   /**
    * Assign zones to an agent
    */
-  async assignZones(
-    id: string,
-    zoneIds: string[],
-  ): Promise<AgentDocument> {
+  async assignZones(id: string, zoneIds: string[]): Promise<AgentDocument> {
     const agent = await this.agentModel
       .findByIdAndUpdate(
         id,
