@@ -13,7 +13,7 @@ import {
 import { ParkingZonesService } from './parking-zones.service';
 import { CreateParkingZoneDto, UpdateParkingZoneDto } from './dto';
 
-@Controller('zones')
+@Controller('parking-zones')
 export class ParkingZonesController {
   constructor(private readonly parkingZonesService: ParkingZonesService) {}
 
