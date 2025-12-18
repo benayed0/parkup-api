@@ -22,13 +22,6 @@ export class AgentsService {
     @InjectModel(Agent.name)
     private agentModel: Model<AgentDocument>,
   ) {
-    this.create({
-      agentCode: 'AG-001',
-      username: 'SBS-001',
-      password: 'agent',
-      name: 'Hosni',
-      isActive: true,
-    }).then();
   }
 
   /**
