@@ -11,6 +11,21 @@ export class ParkingZone {
   @Prop({ required: true })
   name: string;
 
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+  })
+  location: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
   @Prop()
   description?: string;
 
