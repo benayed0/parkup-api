@@ -1,56 +1,56 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
-import { ParkingMetersService } from '../parking-meters/parking-meters.service';
+import { ParkingZonesService } from '../parking-zones/parking-zones.service';
 
 @Injectable()
 export class QrCodesService {
   private readonly baseUrl: string;
 
   constructor(
-    private readonly parkingMetersService: ParkingMetersService,
+    private readonly parkingZonesService: ParkingZonesService,
     private readonly configService: ConfigService,
   ) {
     this.baseUrl = 'http://localhost:57852'; //this.configService.get<string>('APP_BASE_URL', 'https://parkup.app');
   }
 
   async generateQrCode(
-    meterId: string,
+    zoneId: string,
     size: number = 300,
-  ): Promise<{ dataUrl: string; content: string; meterId: string }> {
-    const meter = await this.parkingMetersService.findOne(meterId);
+  ): Promise<{ dataUrl: string; content: string; zoneId: string }> {
+    const zone = await this.parkingZonesService.findOne(zoneId);
 
-    if (!meter) {
-      throw new NotFoundException(`Parking meter with ID ${meterId} not found`);
+    if (!zone) {
+      throw new NotFoundException(`Parking zone with ID ${zoneId} not found`);
     }
 
-    const content = this.buildQrContent(meterId);
+    const content = this.buildQrContent(zoneId);
     const dataUrl = await this.generateQrDataUrl(content, size);
 
     return {
       dataUrl,
       content,
-      meterId,
+      zoneId,
     };
   }
 
   async generateBulkQrCodes(
-    meterIds: string[],
+    zoneIds: string[],
     size: number = 300,
   ): Promise<
-    Array<{ meterId: string; dataUrl: string; content: string; error?: string }>
+    Array<{ zoneId: string; dataUrl: string; content: string; error?: string }>
   > {
     const results = await Promise.all(
-      meterIds.map(async (meterId) => {
+      zoneIds.map(async (zoneId) => {
         try {
-          const qrData = await this.generateQrCode(meterId, size);
+          const qrData = await this.generateQrCode(zoneId, size);
           return qrData;
         } catch {
           return {
-            meterId,
+            zoneId,
             dataUrl: '',
             content: '',
-            error: `Meter not found`,
+            error: `Zone not found`,
           };
         }
       }),
@@ -60,16 +60,16 @@ export class QrCodesService {
   }
 
   async generateQrBuffer(
-    meterId: string,
+    zoneId: string,
     size: number = 300,
-  ): Promise<{ buffer: Buffer; content: string; meterId: string }> {
-    const meter = await this.parkingMetersService.findOne(meterId);
+  ): Promise<{ buffer: Buffer; content: string; zoneId: string }> {
+    const zone = await this.parkingZonesService.findOne(zoneId);
 
-    if (!meter) {
-      throw new NotFoundException(`Parking meter with ID ${meterId} not found`);
+    if (!zone) {
+      throw new NotFoundException(`Parking zone with ID ${zoneId} not found`);
     }
 
-    const content = this.buildQrContent(meterId);
+    const content = this.buildQrContent(zoneId);
     const buffer = await QRCode.toBuffer(content, {
       width: size,
       margin: 2,
@@ -79,12 +79,12 @@ export class QrCodesService {
     return {
       buffer,
       content,
-      meterId,
+      zoneId,
     };
   }
 
-  private buildQrContent(meterId: string): string {
-    return `${this.baseUrl}/parking/start?meter=${meterId}`;
+  private buildQrContent(zoneId: string): string {
+    return `${this.baseUrl}/parking/start?zone=${zoneId}`;
   }
 
   private async generateQrDataUrl(

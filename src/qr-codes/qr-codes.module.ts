@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { QrCodesController } from './qr-codes.controller';
 import { QrCodesService } from './qr-codes.service';
-import { ParkingMetersModule } from '../parking-meters/parking-meters.module';
+import { ParkingZonesModule } from '../parking-zones/parking-zones.module';
 
 @Module({
-  imports: [ParkingMetersModule],
+  imports: [ParkingZonesModule],
   controllers: [QrCodesController],
   providers: [QrCodesService],
   exports: [QrCodesService],

@@ -5,7 +5,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ParkingSessionsModule } from './parking-sessions/parking-sessions.module';
 import { ParkingZonesModule } from './parking-zones/parking-zones.module';
-import { ParkingMetersModule } from './parking-meters/parking-meters.module';
 import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -26,7 +25,6 @@ import { AgentsModule } from './agents/agents.module';
     }),
     ParkingSessionsModule,
     ParkingZonesModule,
-    ParkingMetersModule,
     QrCodesModule,
     UsersModule,
     AuthModule,

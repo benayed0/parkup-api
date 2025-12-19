@@ -34,11 +34,20 @@ export class ParkingSessionsService {
         ? new Types.ObjectId(createDto.userId)
         : undefined
       : undefined;
+
     const session = new this.parkingSessionModel({
-      ...createDto,
       userId,
-      meterId: new Types.ObjectId(createDto.meterId),
+      zoneId: new Types.ObjectId(createDto.zoneId),
+      zoneName: createDto.zoneName,
+      location: {
+        type: 'Point',
+        coordinates: createDto.coordinates,
+      },
       licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
+      startTime: createDto.startTime,
+      endTime: createDto.endTime,
+      durationMinutes: createDto.durationMinutes,
+      amount: createDto.amount,
       status: createDto.status || ParkingSessionStatus.ACTIVE,
     });
 
@@ -50,6 +59,7 @@ export class ParkingSessionsService {
    */
   async findAll(filters?: {
     userId?: string;
+    zoneId?: string;
     status?: ParkingSessionStatus;
     licensePlate?: string;
     limit?: number;
@@ -59,6 +69,9 @@ export class ParkingSessionsService {
 
     if (filters?.userId) {
       query.userId = new Types.ObjectId(filters.userId);
+    }
+    if (filters?.zoneId) {
+      query.zoneId = new Types.ObjectId(filters.zoneId);
     }
     if (filters?.status) {
       query.status = filters.status;
@@ -71,7 +84,6 @@ export class ParkingSessionsService {
 
     return this.parkingSessionModel
       .find(query)
-      .populate('meterId')
       .sort({ createdAt: -1 })
       .skip(filters?.skip || 0)
       .limit(filters?.limit || 50)
@@ -103,7 +115,6 @@ export class ParkingSessionsService {
         userId,
         status: ParkingSessionStatus.ACTIVE,
       })
-      .populate('meterId')
       .exec();
   }
 
@@ -118,18 +129,14 @@ export class ParkingSessionsService {
         licensePlate: licensePlate.toUpperCase().replace(/\s/g, ''),
         status: ParkingSessionStatus.ACTIVE,
       })
-      .populate('meterId')
       .exec();
   }
 
   /**
-   * Find a single session by ID (with populated meter)
+   * Find a single session by ID
    */
   async findOne(id: string): Promise<ParkingSessionDocument> {
-    const session = await this.parkingSessionModel
-      .findById(id)
-      .populate('meterId')
-      .exec();
+    const session = await this.parkingSessionModel.findById(id).exec();
     if (!session) {
       throw new NotFoundException(`Parking session #${id} not found`);
     }
@@ -143,16 +150,26 @@ export class ParkingSessionsService {
     id: string,
     updateDto: UpdateParkingSessionDto,
   ): Promise<ParkingSessionDocument> {
-    const userId = updateDto.userId
-      ? Types.ObjectId.isValid(updateDto.userId)
-        ? new Types.ObjectId(updateDto.userId)
-        : undefined
-      : undefined;
-    if (userId) {
-      (updateDto as any).userId = userId;
+    const updateData: Record<string, any> = { ...updateDto };
+
+    if (updateDto.userId && Types.ObjectId.isValid(updateDto.userId)) {
+      updateData.userId = new Types.ObjectId(updateDto.userId);
     }
+
+    if (updateDto.zoneId && Types.ObjectId.isValid(updateDto.zoneId)) {
+      updateData.zoneId = new Types.ObjectId(updateDto.zoneId);
+    }
+
+    if (updateDto.coordinates) {
+      updateData.location = {
+        type: 'Point',
+        coordinates: updateDto.coordinates,
+      };
+      delete updateData.coordinates;
+    }
+
     const session = await this.parkingSessionModel
-      .findByIdAndUpdate(id, updateDto, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true })
       .exec();
 
     if (!session) {
@@ -270,7 +287,6 @@ export class ParkingSessionsService {
           ],
         },
       })
-      .populate('meterId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

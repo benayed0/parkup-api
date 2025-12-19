@@ -16,13 +16,13 @@ import { GenerateQrDto, GenerateBulkQrDto } from './dto';
 export class QrCodesController {
   constructor(private readonly qrCodesService: QrCodesService) {}
 
-  @Get('meter/:meterId')
-  async generateForMeter(
-    @Param('meterId') meterId: string,
+  @Get('zone/:zoneId')
+  async generateForZone(
+    @Param('zoneId') zoneId: string,
     @Query('size') size?: string,
   ) {
     const qrData = await this.qrCodesService.generateQrCode(
-      meterId,
+      zoneId,
       size ? parseInt(size, 10) : 300,
     );
 
@@ -32,14 +32,14 @@ export class QrCodesController {
     };
   }
 
-  @Get('meter/:meterId/image')
-  async generateImageForMeter(
-    @Param('meterId') meterId: string,
+  @Get('zone/:zoneId/image')
+  async generateImageForZone(
+    @Param('zoneId') zoneId: string,
     @Query('size') size?: string,
     @Res() res?: Response,
   ) {
-    const { buffer, meterId: id } = await this.qrCodesService.generateQrBuffer(
-      meterId,
+    const { buffer, zoneId: id } = await this.qrCodesService.generateQrBuffer(
+      zoneId,
       size ? parseInt(size, 10) : 300,
     );
 
@@ -55,7 +55,7 @@ export class QrCodesController {
   @Post()
   async generate(@Body() generateDto: GenerateQrDto) {
     const qrData = await this.qrCodesService.generateQrCode(
-      generateDto.meterId,
+      generateDto.zoneId,
       generateDto.size,
     );
 
@@ -68,7 +68,7 @@ export class QrCodesController {
   @Post('bulk')
   async generateBulk(@Body() bulkDto: GenerateBulkQrDto) {
     const qrCodes = await this.qrCodesService.generateBulkQrCodes(
-      bulkDto.meterIds,
+      bulkDto.zoneIds,
       bulkDto.size,
     );
 

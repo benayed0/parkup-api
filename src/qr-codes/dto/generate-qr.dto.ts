@@ -2,7 +2,7 @@ import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
 
 export class GenerateQrDto {
   @IsString()
-  meterId: string;
+  zoneId: string;
 
   @IsOptional()
   @IsInt()
@@ -13,7 +13,7 @@ export class GenerateQrDto {
 
 export class GenerateBulkQrDto {
   @IsString({ each: true })
-  meterIds: string[];
+  zoneIds: string[];
 
   @IsOptional()
   @IsInt()

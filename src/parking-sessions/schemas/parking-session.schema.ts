@@ -14,7 +14,6 @@ export enum ParkingSessionStatus {
 export class ParkingSession {
   @Prop({
     required: false,
-
     type: Types.ObjectId,
     ref: 'User',
     index: true,
@@ -23,11 +22,30 @@ export class ParkingSession {
 
   @Prop({
     type: Types.ObjectId,
-    ref: 'ParkingMeter',
+    ref: 'ParkingZone',
     required: true,
     index: true,
   })
-  meterId: Types.ObjectId;
+  zoneId: Types.ObjectId;
+
+  @Prop({ required: true })
+  zoneName: string;
+
+  @Prop({
+    type: {
+      type: String,
+      enum: ['Point'],
+      default: 'Point',
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+  })
+  location: {
+    type: 'Point';
+    coordinates: [number, number]; // [longitude, latitude]
+  };
 
   @Prop({ required: true, uppercase: true, index: true })
   licensePlate: string;
@@ -60,8 +78,11 @@ export class ParkingSession {
 export const ParkingSessionSchema =
   SchemaFactory.createForClass(ParkingSession);
 
+// Geospatial index for location-based queries
+ParkingSessionSchema.index({ location: '2dsphere' });
+
 // Compound indexes for common queries
 ParkingSessionSchema.index({ userId: 1, status: 1 });
 ParkingSessionSchema.index({ userId: 1, createdAt: -1 });
 ParkingSessionSchema.index({ licensePlate: 1, status: 1 });
-ParkingSessionSchema.index({ meterId: 1, status: 1 });
+ParkingSessionSchema.index({ zoneId: 1, status: 1 });

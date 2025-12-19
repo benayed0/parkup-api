@@ -7,6 +7,9 @@ import {
   IsOptional,
   IsEnum,
   Min,
+  IsArray,
+  ArrayMinSize,
+  ArrayMaxSize,
 } from 'class-validator';
 import { ParkingSessionStatus } from '../schemas/parking-session.schema';
 
@@ -17,7 +20,17 @@ export class CreateParkingSessionDto {
 
   @IsString()
   @IsNotEmpty()
-  meterId: string;
+  zoneId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  zoneName: string;
+
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsNumber({}, { each: true })
+  coordinates: [number, number]; // [longitude, latitude]
 
   @IsString()
   @IsNotEmpty()
