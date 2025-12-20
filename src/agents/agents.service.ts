@@ -28,18 +28,12 @@ export class AgentsService {
    * Create a new agent
    */
   async create(createDto: CreateAgentDto): Promise<AgentDocument> {
-    // Check if agent code or username already exists
+    // Check if username already exists
     const existing = await this.agentModel.findOne({
-      $or: [
-        { agentCode: createDto.agentCode.toUpperCase() },
-        { username: createDto.username.toLowerCase() },
-      ],
+      username: createDto.username.toLowerCase(),
     });
 
     if (existing) {
-      if (existing.agentCode === createDto.agentCode.toUpperCase()) {
-        throw new ConflictException('Agent code already exists');
-      }
       throw new ConflictException('Username already exists');
     }
 
@@ -53,7 +47,6 @@ export class AgentsService {
 
     const agent = new this.agentModel({
       ...createDto,
-      agentCode: createDto.agentCode.toUpperCase(),
       username: createDto.username.toLowerCase(),
       password: hashedPassword,
       assignedZones,
@@ -126,7 +119,7 @@ export class AgentsService {
     return this.agentModel
       .find(query)
       .populate('assignedZones')
-      .sort({ agentCode: 1 })
+      .sort({ name: 1 })
       .skip(filters?.skip || 0)
       .limit(filters?.limit || 50)
       .exec();
@@ -148,21 +141,6 @@ export class AgentsService {
   }
 
   /**
-   * Find agent by agent code
-   */
-  async findByAgentCode(agentCode: string): Promise<AgentDocument> {
-    const agent = await this.agentModel
-      .findOne({ agentCode: agentCode.toUpperCase() })
-      .populate('assignedZones')
-      .exec();
-
-    if (!agent) {
-      throw new NotFoundException(`Agent ${agentCode} not found`);
-    }
-    return agent;
-  }
-
-  /**
    * Find agent by username
    */
   async findByUsername(username: string): Promise<AgentDocument | null> {
@@ -179,15 +157,12 @@ export class AgentsService {
     const updateData: Record<string, any> = { ...updateDto };
 
     // Normalize fields
-    if (updateDto.agentCode) {
-      updateData.agentCode = updateDto.agentCode.toUpperCase();
-    }
     if (updateDto.username) {
       updateData.username = updateDto.username.toLowerCase();
     }
     if (updateDto.assignedZones) {
       updateData.assignedZones = updateDto.assignedZones.map(
-        (id) => new Types.ObjectId(id),
+        (zoneId) => new Types.ObjectId(zoneId),
       );
     }
 

@@ -11,10 +11,6 @@ import {
 export class CreateAgentDto {
   @IsString()
   @IsNotEmpty()
-  agentCode: string;
-
-  @IsString()
-  @IsNotEmpty()
   name: string;
 
   @IsString()

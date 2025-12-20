@@ -5,14 +5,6 @@ export type AgentDocument = Agent & Document;
 
 @Schema({ timestamps: true })
 export class Agent {
-  @Prop({
-    required: true,
-    unique: true,
-    uppercase: true,
-    index: true,
-  })
-  agentCode: string;
-
   @Prop({ required: true })
   name: string;
 
@@ -47,5 +39,4 @@ export class Agent {
 export const AgentSchema = SchemaFactory.createForClass(Agent);
 
 // Compound indexes
-AgentSchema.index({ isActive: 1, agentCode: 1 });
 AgentSchema.index({ isActive: 1, username: 1 });

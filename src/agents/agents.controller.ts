@@ -89,19 +89,6 @@ export class AgentsController {
   }
 
   /**
-   * Get agent by agent code
-   * GET /agents/code/:agentCode
-   */
-  @Get('code/:agentCode')
-  async findByAgentCode(@Param('agentCode') agentCode: string) {
-    const agent = await this.agentsService.findByAgentCode(agentCode);
-    return {
-      success: true,
-      data: agent,
-    };
-  }
-
-  /**
    * Get a single agent by ID
    * GET /agents/:id
    */
