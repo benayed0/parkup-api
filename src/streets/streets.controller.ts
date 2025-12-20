@@ -64,8 +64,31 @@ export class StreetsController {
   }
 
   @Get()
-  @UseGuards(OperatorJwtAuthGuard)
   async findAll(
+    @Query('zoneId') zoneId?: string,
+    @Query('type') type?: StreetType,
+    @Query('isActive') isActive?: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const streets = await this.streetsService.findAll({
+      zoneId,
+      type,
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      skip: skip ? parseInt(skip, 10) : undefined,
+    });
+    return {
+      success: true,
+      data: streets,
+      count: streets.length,
+    };
+  }
+
+  // Admin endpoint - filtered by operator's assigned zones
+  @Get('admin')
+  @UseGuards(OperatorJwtAuthGuard)
+  async findAllForAdmin(
     @Req() req: any,
     @Query('zoneId') zoneId?: string,
     @Query('type') type?: StreetType,
@@ -97,7 +120,7 @@ export class StreetsController {
     }
 
     const streets = await this.streetsService.findAll({
-      zoneId: zoneIds ? undefined : zoneId, // Ignore zoneId filter if we're filtering by zoneIds
+      zoneId: zoneIds ? undefined : zoneId,
       zoneIds,
       type,
       isActive: isActive !== undefined ? isActive === 'true' : undefined,

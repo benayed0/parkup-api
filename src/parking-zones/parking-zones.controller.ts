@@ -31,8 +31,27 @@ export class ParkingZonesController {
   }
 
   @Get()
-  @UseGuards(OperatorJwtAuthGuard)
   async findAll(
+    @Query('isActive') isActive?: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const zones = await this.parkingZonesService.findAll({
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      skip: skip ? parseInt(skip, 10) : undefined,
+    });
+    return {
+      success: true,
+      data: zones,
+      count: zones.length,
+    };
+  }
+
+  // Admin endpoint - filtered by operator's assigned zones
+  @Get('admin')
+  @UseGuards(OperatorJwtAuthGuard)
+  async findAllForAdmin(
     @Req() req: any,
     @Query('isActive') isActive?: string,
     @Query('limit') limit?: string,
