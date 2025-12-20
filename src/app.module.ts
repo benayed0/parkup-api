@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { AgentsModule } from './agents/agents.module';
+import { StreetsModule } from './streets/streets.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AgentsModule } from './agents/agents.module';
     AuthModule,
     TicketsModule,
     AgentsModule,
+    StreetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
