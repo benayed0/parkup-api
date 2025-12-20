@@ -30,6 +30,7 @@ export class StreetsService {
 
   async findAll(filters?: {
     zoneId?: string;
+    zoneIds?: string[];
     type?: StreetType;
     isActive?: boolean;
     limit?: number;
@@ -37,7 +38,10 @@ export class StreetsService {
   }): Promise<Street[]> {
     const query: Record<string, unknown> = {};
 
-    if (filters?.zoneId) {
+    if (filters?.zoneIds && filters.zoneIds.length > 0) {
+      // Filter by multiple zone IDs (for non-super_admin operators)
+      query.zoneId = { $in: filters.zoneIds.map((id) => new Types.ObjectId(id)) };
+    } else if (filters?.zoneId) {
       query.zoneId = new Types.ObjectId(filters.zoneId);
     }
 

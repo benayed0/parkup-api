@@ -24,6 +24,7 @@ export class ParkingZonesService {
 
   async findAll(filters?: {
     isActive?: boolean;
+    zoneIds?: string[];
     limit?: number;
     skip?: number;
   }): Promise<ParkingZoneDocument[]> {
@@ -31,6 +32,11 @@ export class ParkingZonesService {
 
     if (filters?.isActive !== undefined) {
       query.isActive = filters.isActive;
+    }
+
+    // Filter by specific zone IDs (for non-super_admin operators)
+    if (filters?.zoneIds && filters.zoneIds.length > 0) {
+      query._id = { $in: filters.zoneIds };
     }
 
     return this.parkingZoneModel

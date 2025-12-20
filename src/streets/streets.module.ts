@@ -3,10 +3,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { StreetsService } from './streets.service';
 import { StreetsController } from './streets.controller';
 import { Street, StreetSchema } from './schemas/street.schema';
+import { OperatorsModule } from '../operators/operators.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Street.name, schema: StreetSchema }]),
+    OperatorsModule,
   ],
   controllers: [StreetsController],
   providers: [StreetsService],

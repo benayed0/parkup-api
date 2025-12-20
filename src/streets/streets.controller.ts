@@ -7,11 +7,15 @@ import {
   Param,
   Delete,
   Query,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { StreetsService } from './streets.service';
 import { CreateStreetDto } from './dto/create-street.dto';
 import { UpdateStreetDto } from './dto/update-street.dto';
 import { StreetType } from './schemas/street.schema';
+import { OperatorJwtAuthGuard } from '../operators/guards/operator-jwt-auth.guard';
+import { OperatorRole } from '../operators/schemas/operator.schema';
 
 @Controller('streets')
 export class StreetsController {
@@ -60,15 +64,41 @@ export class StreetsController {
   }
 
   @Get()
+  @UseGuards(OperatorJwtAuthGuard)
   async findAll(
+    @Req() req: any,
     @Query('zoneId') zoneId?: string,
     @Query('type') type?: StreetType,
     @Query('isActive') isActive?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
   ) {
+    const operator = req.user;
+
+    // For non-super_admin, filter by their assigned zones
+    let zoneIds: string[] | undefined;
+    if (operator.role !== OperatorRole.SUPER_ADMIN) {
+      // Get zone IDs from the operator (may be populated or just IDs)
+      zoneIds = (operator.zoneIds || []).map((zone: any) => {
+        if (typeof zone === 'object' && zone._id) {
+          return zone._id.toString();
+        }
+        return zone.toString();
+      });
+
+      // If operator has no zones assigned, return empty result
+      if (zoneIds.length === 0) {
+        return {
+          success: true,
+          data: [],
+          count: 0,
+        };
+      }
+    }
+
     const streets = await this.streetsService.findAll({
-      zoneId,
+      zoneId: zoneIds ? undefined : zoneId, // Ignore zoneId filter if we're filtering by zoneIds
+      zoneIds,
       type,
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,

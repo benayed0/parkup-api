@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 import { AgentsModule } from './agents/agents.module';
 import { StreetsModule } from './streets/streets.module';
+import { OperatorsModule } from './operators/operators.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { StreetsModule } from './streets/streets.module';
     TicketsModule,
     AgentsModule,
     StreetsModule,
+    OperatorsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -9,9 +9,13 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { ParkingZonesService } from './parking-zones.service';
 import { CreateParkingZoneDto, UpdateParkingZoneDto } from './dto';
+import { OperatorJwtAuthGuard } from '../operators/guards/operator-jwt-auth.guard';
+import { OperatorRole } from '../operators/schemas/operator.schema';
 
 @Controller('zones')
 export class ParkingZonesController {
@@ -27,13 +31,39 @@ export class ParkingZonesController {
   }
 
   @Get()
+  @UseGuards(OperatorJwtAuthGuard)
   async findAll(
+    @Req() req: any,
     @Query('isActive') isActive?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
   ) {
+    const operator = req.user;
+
+    // For non-super_admin, filter by their assigned zones
+    let zoneIds: string[] | undefined;
+    if (operator.role !== OperatorRole.SUPER_ADMIN) {
+      // Get zone IDs from the operator (may be populated or just IDs)
+      zoneIds = (operator.zoneIds || []).map((zone: any) => {
+        if (typeof zone === 'object' && zone._id) {
+          return zone._id.toString();
+        }
+        return zone.toString();
+      });
+
+      // If operator has no zones assigned, return empty result
+      if (zoneIds.length === 0) {
+        return {
+          success: true,
+          data: [],
+          count: 0,
+        };
+      }
+    }
+
     const zones = await this.parkingZonesService.findAll({
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      zoneIds,
       limit: limit ? parseInt(limit, 10) : undefined,
       skip: skip ? parseInt(skip, 10) : undefined,
     });
