@@ -335,11 +335,7 @@ export class TicketsService {
     }
 
     const updatedTicket = await this.ticketModel
-      .findByIdAndUpdate(
-        id,
-        { status: TicketStatus.DISMISSED },
-        { new: true },
-      )
+      .findByIdAndUpdate(id, { status: TicketStatus.DISMISSED }, { new: true })
       .exec();
 
     return updatedTicket!;
@@ -409,19 +405,28 @@ export class TicketsService {
             _id: null,
             total: { $sum: 1 },
             pending: {
-              $sum: { $cond: [{ $eq: ['$status', TicketStatus.PENDING] }, 1, 0] },
+              $sum: {
+                $cond: [{ $eq: ['$status', TicketStatus.PENDING] }, 1, 0],
+              },
             },
             paid: {
               $sum: { $cond: [{ $eq: ['$status', TicketStatus.PAID] }, 1, 0] },
             },
             overdue: {
-              $sum: { $cond: [{ $eq: ['$status', TicketStatus.OVERDUE] }, 1, 0] },
+              $sum: {
+                $cond: [{ $eq: ['$status', TicketStatus.OVERDUE] }, 1, 0],
+              },
             },
             totalFines: { $sum: '$fineAmount' },
             unpaidFines: {
               $sum: {
                 $cond: [
-                  { $in: ['$status', [TicketStatus.PENDING, TicketStatus.OVERDUE]] },
+                  {
+                    $in: [
+                      '$status',
+                      [TicketStatus.PENDING, TicketStatus.OVERDUE],
+                    ],
+                  },
                   '$fineAmount',
                   0,
                 ],

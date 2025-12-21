@@ -106,10 +106,7 @@ export class AgentsController {
    * PUT /agents/:id
    */
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateAgentDto,
-  ) {
+  async update(@Param('id') id: string, @Body() updateDto: UpdateAgentDto) {
     const agent = await this.agentsService.update(id, updateDto);
     return {
       success: true,

@@ -12,6 +12,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { AgentsModule } from './agents/agents.module';
 import { StreetsModule } from './streets/streets.module';
 import { OperatorsModule } from './operators/operators.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { OperatorsModule } from './operators/operators.module';
     AgentsModule,
     StreetsModule,
     OperatorsModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [AppService],

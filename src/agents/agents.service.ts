@@ -21,8 +21,7 @@ export class AgentsService {
   constructor(
     @InjectModel(Agent.name)
     private agentModel: Model<AgentDocument>,
-  ) {
-  }
+  ) {}
 
   /**
    * Create a new agent

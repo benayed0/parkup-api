@@ -6,8 +6,6 @@ import {
   IsBoolean,
   IsArray,
   ValidateNested,
-  IsNumber,
-  Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -43,9 +41,4 @@ export class CreateUserDto {
   @ValidateNested({ each: true })
   @Type(() => CreateVehicleDto)
   vehicles?: CreateVehicleDto[];
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  walletBalance?: number;
 }

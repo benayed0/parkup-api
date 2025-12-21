@@ -19,10 +19,14 @@ import {
   RefreshTokenDto,
   UpdateProfileDto,
 } from './dto';
+import { WalletService } from '../wallet/wallet.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly walletService: WalletService,
+  ) {}
 
   /**
    * Send OTP to email
@@ -45,7 +49,7 @@ export class AuthController {
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,
-      user: this.formatUser(result.user),
+      user: await this.formatUser(result.user),
     };
   }
 
@@ -57,11 +61,14 @@ export class AuthController {
   @Post('google')
   @HttpCode(HttpStatus.OK)
   async googleAuth(@Body() dto: GoogleAuthDto) {
-    const result = await this.authService.googleAuth(dto.idToken, dto.accessToken);
+    const result = await this.authService.googleAuth(
+      dto.idToken,
+      dto.accessToken,
+    );
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,
-      user: this.formatUser(result.user),
+      user: await this.formatUser(result.user),
     };
   }
 
@@ -76,7 +83,7 @@ export class AuthController {
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,
-      user: this.formatUser(result.user),
+      user: await this.formatUser(result.user),
     };
   }
 
@@ -91,7 +98,7 @@ export class AuthController {
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,
-      user: this.formatUser(result.user),
+      user: await this.formatUser(result.user),
     };
   }
 
@@ -118,7 +125,7 @@ export class AuthController {
   async getProfile(@Request() req) {
     const user = await this.authService.getProfile(req.user._id.toString());
     return {
-      user: this.formatUser(user),
+      user: await this.formatUser(user),
     };
   }
 
@@ -129,16 +136,29 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   async updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
-    const user = await this.authService.updateProfile(req.user._id.toString(), dto);
+    const user = await this.authService.updateProfile(
+      req.user._id.toString(),
+      dto,
+    );
     return {
-      user: this.formatUser(user),
+      user: await this.formatUser(user),
     };
   }
 
   /**
    * Format user for API response (snake_case for Flutter)
    */
-  private formatUser(user: any) {
+  private async formatUser(user: any) {
+    // Fetch wallet balance from wallet service
+    let walletBalance = 0;
+    try {
+      const wallet = await this.walletService.getWallet(user._id.toString());
+      walletBalance = wallet.balance;
+    } catch {
+      // Wallet may not exist yet for older users, default to 0
+      walletBalance = 0;
+    }
+
     return {
       id: user._id.toString(),
       email: user.email,
@@ -149,7 +169,7 @@ export class AuthController {
         nickname: v.nickname || null,
         is_default: v.isDefault,
       })),
-      wallet_balance: user.walletBalance,
+      wallet_balance: walletBalance,
       created_at: user.createdAt?.toISOString() || null,
       updated_at: user.updatedAt?.toISOString() || null,
     };
