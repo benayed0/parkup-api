@@ -149,18 +149,27 @@ export class AuthController {
    * Format user for API response (snake_case for Flutter)
    */
   private async formatUser(user: any) {
-    // Fetch wallet balance from wallet service
+    // Ensure wallet exists and fetch balance
+    const userId = user._id.toString();
     let walletBalance = 0;
+
     try {
-      const wallet = await this.walletService.getWallet(user._id.toString());
+      // Try to get existing wallet
+      const wallet = await this.walletService.getWallet(userId);
       walletBalance = wallet.balance;
     } catch {
-      // Wallet may not exist yet for older users, default to 0
-      walletBalance = 0;
+      // Wallet doesn't exist, create it with default values
+      try {
+        await this.walletService.createWallet(userId);
+        walletBalance = 0;
+      } catch {
+        // Creation failed (race condition or other error), default to 0
+        walletBalance = 0;
+      }
     }
 
     return {
-      id: user._id.toString(),
+      id: userId,
       email: user.email,
       phone: user.phone || null,
       is_email_verified: user.isEmailVerified,
