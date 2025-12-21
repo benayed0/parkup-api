@@ -123,7 +123,10 @@ export class OperatorsController {
   @Put(':id')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
   @Roles(OperatorRole.SUPER_ADMIN)
-  async update(@Param('id') id: string, @Body() updateOperatorDto: UpdateOperatorDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateOperatorDto: UpdateOperatorDto,
+  ) {
     const operator = await this.operatorsService.update(id, updateOperatorDto);
     return {
       success: true,
@@ -157,7 +160,9 @@ export class OperatorsController {
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
   @Roles(OperatorRole.SUPER_ADMIN)
   async deactivate(@Param('id') id: string) {
-    const operator = await this.operatorsService.update(id, { isActive: false });
+    const operator = await this.operatorsService.update(id, {
+      isActive: false,
+    });
     return {
       success: true,
       data: operator,
@@ -170,7 +175,10 @@ export class OperatorsController {
   @Put(':id/zones')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
   @Roles(OperatorRole.SUPER_ADMIN)
-  async updateZones(@Param('id') id: string, @Body('zoneIds') zoneIds: string[]) {
+  async updateZones(
+    @Param('id') id: string,
+    @Body('zoneIds') zoneIds: string[],
+  ) {
     const operator = await this.operatorsService.update(id, { zoneIds });
     return {
       success: true,

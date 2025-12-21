@@ -151,10 +151,9 @@ export class TicketsController {
     @Param('licensePlate') licensePlate: string,
     @Query('status') status?: TicketStatus,
   ) {
-    const tickets = await this.ticketsService.findByLicensePlate(
-      licensePlate,
-      { status },
-    );
+    const tickets = await this.ticketsService.findByLicensePlate(licensePlate, {
+      status,
+    });
     return {
       success: true,
       data: tickets,
@@ -207,10 +206,7 @@ export class TicketsController {
    * PUT /tickets/:id
    */
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateTicketDto,
-  ) {
+  async update(@Param('id') id: string, @Body() updateDto: UpdateTicketDto) {
     const ticket = await this.ticketsService.update(id, updateDto);
     return {
       success: true,

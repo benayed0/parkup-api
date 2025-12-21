@@ -192,7 +192,10 @@ export class AuthService {
    * Authenticate with Google
    * Supports both idToken (mobile) and accessToken (web)
    */
-  async googleAuth(idToken?: string, accessToken?: string): Promise<AuthResponse> {
+  async googleAuth(
+    idToken?: string,
+    accessToken?: string,
+  ): Promise<AuthResponse> {
     try {
       let email: string;
 

@@ -11,7 +11,8 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
 
   // Enable CORS
-  const allowedOrigins = configService.get<string>('CORS_ORIGINS')?.split(',') || [];
+  const allowedOrigins =
+    configService.get<string>('CORS_ORIGINS')?.split(',') || [];
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (mobile apps, Postman, etc.)
@@ -38,7 +39,13 @@ async function bootstrap() {
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Requested-With',
+    ],
     exposedHeaders: ['Content-Range', 'X-Content-Range'],
   });
 

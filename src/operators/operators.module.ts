@@ -13,7 +13,9 @@ import { RolesGuard } from './guards/roles.guard';
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'operator-jwt' }),
-    MongooseModule.forFeature([{ name: Operator.name, schema: OperatorSchema }]),
+    MongooseModule.forFeature([
+      { name: Operator.name, schema: OperatorSchema },
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -24,7 +26,12 @@ import { RolesGuard } from './guards/roles.guard';
     }),
   ],
   controllers: [OperatorsController],
-  providers: [OperatorsService, OperatorJwtStrategy, OperatorJwtAuthGuard, RolesGuard],
+  providers: [
+    OperatorsService,
+    OperatorJwtStrategy,
+    OperatorJwtAuthGuard,
+    RolesGuard,
+  ],
   exports: [OperatorsService, OperatorJwtAuthGuard, RolesGuard],
 })
 export class OperatorsModule {}

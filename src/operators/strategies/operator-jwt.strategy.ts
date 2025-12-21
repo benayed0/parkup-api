@@ -13,7 +13,10 @@ export interface OperatorJwtPayload {
 }
 
 @Injectable()
-export class OperatorJwtStrategy extends PassportStrategy(Strategy, 'operator-jwt') {
+export class OperatorJwtStrategy extends PassportStrategy(
+  Strategy,
+  'operator-jwt',
+) {
   constructor(
     private configService: ConfigService,
     private operatorsService: OperatorsService,
@@ -31,7 +34,8 @@ export class OperatorJwtStrategy extends PassportStrategy(Strategy, 'operator-jw
     }
 
     try {
-      const operator = await this.operatorsService.validateOperatorToken(payload);
+      const operator =
+        await this.operatorsService.validateOperatorToken(payload);
       return operator;
     } catch {
       throw new UnauthorizedException('Token invalide ou expiré');

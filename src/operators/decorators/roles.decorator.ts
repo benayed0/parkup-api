@@ -23,4 +23,5 @@ export const ROLES_KEY = 'roles';
  * // Manager or higher can access
  * @Roles(OperatorRole.MANAGER)
  */
-export const Roles = (...roles: OperatorRole[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: OperatorRole[]) =>
+  SetMetadata(ROLES_KEY, roles);

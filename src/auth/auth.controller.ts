@@ -57,7 +57,10 @@ export class AuthController {
   @Post('google')
   @HttpCode(HttpStatus.OK)
   async googleAuth(@Body() dto: GoogleAuthDto) {
-    const result = await this.authService.googleAuth(dto.idToken, dto.accessToken);
+    const result = await this.authService.googleAuth(
+      dto.idToken,
+      dto.accessToken,
+    );
     return {
       access_token: result.accessToken,
       refresh_token: result.refreshToken,
@@ -129,7 +132,10 @@ export class AuthController {
   @Patch('profile')
   @UseGuards(JwtAuthGuard)
   async updateProfile(@Request() req, @Body() dto: UpdateProfileDto) {
-    const user = await this.authService.updateProfile(req.user._id.toString(), dto);
+    const user = await this.authService.updateProfile(
+      req.user._id.toString(),
+      dto,
+    );
     return {
       user: this.formatUser(user),
     };

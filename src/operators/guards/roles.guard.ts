@@ -13,10 +13,10 @@ export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<OperatorRole[]>(ROLES_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredRoles = this.reflector.getAllAndOverride<OperatorRole[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     // If no roles are required, allow access
     if (!requiredRoles || requiredRoles.length === 0) {
@@ -33,12 +33,12 @@ export class RolesGuard implements CanActivate {
 
     // Check if operator's role hierarchy is >= any of the required roles
     const hasAccess = requiredRoles.some(
-      (role) => operatorHierarchy >= ROLE_HIERARCHY[role]
+      (role) => operatorHierarchy >= ROLE_HIERARCHY[role],
     );
 
     if (!hasAccess) {
       throw new ForbiddenException(
-        `Accès refusé: vous devez avoir au moins le rôle ${requiredRoles.join(' ou ')}`
+        `Accès refusé: vous devez avoir au moins le rôle ${requiredRoles.join(' ou ')}`,
       );
     }
 

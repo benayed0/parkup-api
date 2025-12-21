@@ -38,10 +38,7 @@ export class UsersController {
    * GET /users?limit=50&skip=0
    */
   @Get()
-  async findAll(
-    @Query('limit') limit?: string,
-    @Query('skip') skip?: string,
-  ) {
+  async findAll(@Query('limit') limit?: string, @Query('skip') skip?: string) {
     const users = await this.usersService.findAll({
       limit: limit ? parseInt(limit, 10) : undefined,
       skip: skip ? parseInt(skip, 10) : undefined,
@@ -71,10 +68,7 @@ export class UsersController {
    * PATCH /users/:id
    */
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateDto: UpdateUserDto,
-  ) {
+  async update(@Param('id') id: string, @Body() updateDto: UpdateUserDto) {
     const user = await this.usersService.update(id, updateDto);
     return {
       success: true,
@@ -97,10 +91,7 @@ export class UsersController {
    * POST /users/:id/vehicles
    */
   @Post(':id/vehicles')
-  async addVehicle(
-    @Param('id') id: string,
-    @Body() vehicleDto: AddVehicleDto,
-  ) {
+  async addVehicle(@Param('id') id: string, @Body() vehicleDto: AddVehicleDto) {
     const user = await this.usersService.addVehicle(id, vehicleDto);
     return {
       success: true,
@@ -118,7 +109,11 @@ export class UsersController {
     @Param('licensePlate') licensePlate: string,
     @Body() updateDto: UpdateVehicleDto,
   ) {
-    const user = await this.usersService.updateVehicle(id, licensePlate, updateDto);
+    const user = await this.usersService.updateVehicle(
+      id,
+      licensePlate,
+      updateDto,
+    );
     return {
       success: true,
       data: user,

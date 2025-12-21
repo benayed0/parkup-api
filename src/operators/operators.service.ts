@@ -8,8 +8,17 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { Operator, OperatorDocument, OperatorRole } from './schemas/operator.schema';
-import { CreateOperatorDto, UpdateOperatorDto, RequestOtpDto, VerifyOtpDto } from './dto';
+import {
+  Operator,
+  OperatorDocument,
+  OperatorRole,
+} from './schemas/operator.schema';
+import {
+  CreateOperatorDto,
+  UpdateOperatorDto,
+  RequestOtpDto,
+  VerifyOtpDto,
+} from './dto';
 
 @Injectable()
 export class OperatorsService {
@@ -24,7 +33,9 @@ export class OperatorsService {
     private jwtService: JwtService,
   ) {}
 
-  async create(createOperatorDto: CreateOperatorDto): Promise<OperatorDocument> {
+  async create(
+    createOperatorDto: CreateOperatorDto,
+  ): Promise<OperatorDocument> {
     const existing = await this.operatorModel.findOne({
       email: createOperatorDto.email.toLowerCase(),
     });
@@ -87,7 +98,10 @@ export class OperatorsService {
     return this.operatorModel.findOne({ email: email.toLowerCase() }).exec();
   }
 
-  async update(id: string, updateOperatorDto: UpdateOperatorDto): Promise<OperatorDocument> {
+  async update(
+    id: string,
+    updateOperatorDto: UpdateOperatorDto,
+  ): Promise<OperatorDocument> {
     if (updateOperatorDto.email) {
       const existing = await this.operatorModel.findOne({
         email: updateOperatorDto.email.toLowerCase(),
@@ -104,7 +118,9 @@ export class OperatorsService {
         id,
         {
           ...updateOperatorDto,
-          ...(updateOperatorDto.email && { email: updateOperatorDto.email.toLowerCase() }),
+          ...(updateOperatorDto.email && {
+            email: updateOperatorDto.email.toLowerCase(),
+          }),
         },
         { new: true },
       )
@@ -141,7 +157,9 @@ export class OperatorsService {
 
     // Generate OTP (hardcoded for now)
     const otp = this.DEV_OTP;
-    const otpExpiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
+    const otpExpiresAt = new Date(
+      Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000,
+    );
 
     // Save OTP to operator
     await this.operatorModel.findByIdAndUpdate(operator._id, {
@@ -174,7 +192,9 @@ export class OperatorsService {
     }
 
     if (!operator.currentOtp || !operator.otpExpiresAt) {
-      throw new BadRequestException('Aucun code OTP en attente. Veuillez en demander un nouveau.');
+      throw new BadRequestException(
+        'Aucun code OTP en attente. Veuillez en demander un nouveau.',
+      );
     }
 
     if (new Date() > operator.otpExpiresAt) {
@@ -183,7 +203,9 @@ export class OperatorsService {
         currentOtp: null,
         otpExpiresAt: null,
       });
-      throw new BadRequestException('Le code OTP a expiré. Veuillez en demander un nouveau.');
+      throw new BadRequestException(
+        'Le code OTP a expiré. Veuillez en demander un nouveau.',
+      );
     }
 
     if (operator.currentOtp !== verifyOtpDto.otp) {
