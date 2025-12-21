@@ -2,6 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Inject,
+  forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,16 +13,21 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AddVehicleDto } from './dto/add-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    @Inject(forwardRef(() => WalletService))
+    private walletService: WalletService,
   ) {}
 
   /**
-   * Create a new user
+   * Create a new user and initialize wallet
    */
   async create(createDto: CreateUserDto): Promise<UserDocument> {
     const existingUser = await this.userModel
@@ -33,13 +41,28 @@ export class UsersService {
     const user = new this.userModel({
       ...createDto,
       email: createDto.email.toLowerCase(),
-      vehicles: createDto.vehicles?.map((v) => ({
-        ...v,
-        licensePlate: v.licensePlate.toUpperCase().replace(/\s/g, ''),
-      })) || [],
+      vehicles:
+        createDto.vehicles?.map((v) => ({
+          ...v,
+          licensePlate: v.licensePlate.toUpperCase().replace(/\s/g, ''),
+        })) || [],
     });
 
-    return user.save();
+    const savedUser = await user.save();
+
+    // Create wallet for the new user (idempotent)
+    try {
+      await this.walletService.createWallet(savedUser._id.toString());
+      this.logger.log(`Wallet created for user ${savedUser._id}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to create wallet for user ${savedUser._id}: ${error}`,
+      );
+      // Don't fail user creation if wallet creation fails
+      // Wallet can be created lazily on first access
+    }
+
+    return savedUser;
   }
 
   /**
@@ -72,9 +95,7 @@ export class UsersService {
    * Find a user by email
    */
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel
-      .findOne({ email: email.toLowerCase() })
-      .exec();
+    return this.userModel.findOne({ email: email.toLowerCase() }).exec();
   }
 
   /**
@@ -119,16 +140,23 @@ export class UsersService {
   /**
    * Add a vehicle to user
    */
-  async addVehicle(userId: string, vehicleDto: AddVehicleDto): Promise<UserDocument> {
+  async addVehicle(
+    userId: string,
+    vehicleDto: AddVehicleDto,
+  ): Promise<UserDocument> {
     const user = await this.findOne(userId);
-    const normalizedPlate = vehicleDto.licensePlate.toUpperCase().replace(/\s/g, '');
+    const normalizedPlate = vehicleDto.licensePlate
+      .toUpperCase()
+      .replace(/\s/g, '');
 
     const existingVehicle = user.vehicles.find(
       (v) => v.licensePlate === normalizedPlate,
     );
 
     if (existingVehicle) {
-      throw new ConflictException('Vehicle with this license plate already exists');
+      throw new ConflictException(
+        'Vehicle with this license plate already exists',
+      );
     }
 
     const newVehicle: Vehicle = {
@@ -168,13 +196,17 @@ export class UsersService {
 
     // Check if new license plate already exists (if changing plate)
     if (updateDto.licensePlate) {
-      const newNormalizedPlate = updateDto.licensePlate.toUpperCase().replace(/\s/g, '');
+      const newNormalizedPlate = updateDto.licensePlate
+        .toUpperCase()
+        .replace(/\s/g, '');
       const duplicateVehicle = user.vehicles.find(
         (v, i) => v.licensePlate === newNormalizedPlate && i !== vehicleIndex,
       );
 
       if (duplicateVehicle) {
-        throw new ConflictException('Vehicle with this license plate already exists');
+        throw new ConflictException(
+          'Vehicle with this license plate already exists',
+        );
       }
 
       user.vehicles[vehicleIndex].licensePlate = newNormalizedPlate;
@@ -197,7 +229,10 @@ export class UsersService {
   /**
    * Remove a vehicle
    */
-  async removeVehicle(userId: string, licensePlate: string): Promise<UserDocument> {
+  async removeVehicle(
+    userId: string,
+    licensePlate: string,
+  ): Promise<UserDocument> {
     const user = await this.findOne(userId);
     const normalizedPlate = licensePlate.toUpperCase().replace(/\s/g, '');
 
