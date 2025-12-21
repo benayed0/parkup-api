@@ -31,9 +31,6 @@ export class User {
   @Prop({ type: [VehicleSchema], default: [] })
   vehicles: Vehicle[];
 
-  @Prop({ default: 0, min: 0 })
-  walletBalance: number;
-
   createdAt?: Date;
   updatedAt?: Date;
 }

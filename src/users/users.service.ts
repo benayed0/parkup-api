@@ -256,23 +256,6 @@ export class UsersService {
   }
 
   /**
-   * Update wallet balance
-   */
-  async updateWalletBalance(
-    userId: string,
-    amount: number,
-  ): Promise<UserDocument> {
-    const user = await this.findOne(userId);
-
-    if (user.walletBalance + amount < 0) {
-      throw new ConflictException('Insufficient wallet balance');
-    }
-
-    user.walletBalance += amount;
-    return user.save();
-  }
-
-  /**
    * Find or create user by email (useful for auth)
    */
   async findOrCreate(email: string): Promise<UserDocument> {

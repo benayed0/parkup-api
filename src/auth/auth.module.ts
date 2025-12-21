@@ -13,6 +13,7 @@ import {
   RefreshTokenSchema,
 } from './schemas/refresh-token.schema';
 import { UsersModule } from '../users/users.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { UsersModule } from '../users/users.module';
       { name: RefreshToken.name, schema: RefreshTokenSchema },
     ]),
     UsersModule,
+    WalletModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard],
