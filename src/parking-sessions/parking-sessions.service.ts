@@ -42,7 +42,11 @@ export class ParkingSessionsService {
 
     // Resolve license plate from structured or string format
     const plate = createDto.plate
-      ? createLicensePlate(createDto.plate.type, createDto.plate.left, createDto.plate.right)
+      ? createLicensePlate(
+          createDto.plate.type,
+          createDto.plate.left,
+          createDto.plate.right,
+        )
       : parseLicensePlateString(createDto.licensePlate || '');
 
     const session = new this.parkingSessionModel({
@@ -128,7 +132,64 @@ export class ParkingSessionsService {
   }
 
   /**
-   * Find active sessions for a license plate
+   * Find active sessions by structured plate data
+   * Uses $or query to match both structured fields AND legacy formatted string
+   * This is more efficient than separate queries
+   */
+  async findActiveByPlate(plate: {
+    type: string;
+    left?: string;
+    right?: string;
+    formatted?: string;
+  }): Promise<ParkingSessionDocument[]> {
+    const now = new Date();
+
+    // Build structured plate query
+    const structuredQuery: Record<string, any> = {};
+    if (plate.type) {
+      structuredQuery['plate.type'] = plate.type;
+    }
+    if (plate.left) {
+      structuredQuery['plate.left'] = plate.left.toUpperCase().replace(/\s/g, '');
+    }
+    if (plate.right) {
+      structuredQuery['plate.right'] = plate.right.toUpperCase().replace(/\s/g, '');
+    }
+
+    // Build formatted string query for legacy data
+    const formattedQuery: Record<string, any> = {};
+    if (plate.formatted) {
+      formattedQuery.licensePlate = normalizeLicensePlate(plate.formatted);
+    }
+
+    // Use $or to search both structured and legacy in single query
+    const hasStructured = Object.keys(structuredQuery).length > 0;
+    const hasFormatted = Object.keys(formattedQuery).length > 0;
+
+    let orConditions: Record<string, any>[] = [];
+    if (hasStructured) {
+      orConditions.push(structuredQuery);
+    }
+    if (hasFormatted) {
+      orConditions.push(formattedQuery);
+    }
+
+    // If no valid query conditions, return empty
+    if (orConditions.length === 0) {
+      return [];
+    }
+
+    const query = {
+      endTime: { $gt: now },
+      $or: orConditions,
+    };
+
+    return this.parkingSessionModel.find(query).exec();
+  }
+
+  /**
+   * Find active sessions for a license plate string
+   * @deprecated Use findActiveByPlate with structured plate object instead
    */
   async findActiveByLicensePlate(
     licensePlate: string,
@@ -136,7 +197,7 @@ export class ParkingSessionsService {
     return this.parkingSessionModel
       .find({
         licensePlate: normalizeLicensePlate(licensePlate),
-        status: ParkingSessionStatus.ACTIVE,
+        endTime: { $gt: new Date() },
       })
       .exec();
   }

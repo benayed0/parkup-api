@@ -252,13 +252,13 @@ When an agent issues a ticket, their `_id` is stored as `agentId` in the Ticket 
 // Creating a ticket as an agent
 POST /api/v1/tickets
 {
-  "meterId": "64meter...",
   "agentId": "64agent...",  // Required - the issuing agent
   "licensePlate": "ABC 123",
-  "reason": "no_session",
+  "reason": "car_sabot",    // car_sabot ($50) or pound ($100)
   "fineAmount": 50,
   "issuedAt": "2024-12-17T10:30:00Z",
-  "dueDate": "2024-12-31T23:59:59Z"
+  "dueDate": "2024-12-31T23:59:59Z",
+  "position": { "type": "Point", "coordinates": [10.1234, 36.5678] }
 }
 ```
 
@@ -281,12 +281,11 @@ GET /api/v1/tickets?agentId=64agent...
 2. Agent checks a vehicle's license plate
    GET /parking-sessions/plate/:licensePlate/active
 
-3. If no active session found:
+3. If violation found, issue ticket:
    POST /tickets {
-     meterId, agentId, licensePlate,
-     reason: "no_session",
-     fineAmount, issuedAt, dueDate,
-     evidencePhotos: [...]
+     agentId, licensePlate, position,
+     reason: "car_sabot" or "pound",
+     fineAmount, issuedAt, dueDate
    }
 
 4. Agent can view their issued tickets

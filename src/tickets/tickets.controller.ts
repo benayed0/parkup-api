@@ -40,6 +40,7 @@ export class TicketsController {
   /**
    * Get all tickets (with optional filters)
    * GET /tickets?userId=xxx&agentId=xxx&status=pending&licensePlate=ABC123&limit=10
+   * Plate search: plateLeft, plateRight, plateType for partial matching
    */
   @Get()
   async findAll(
@@ -47,6 +48,9 @@ export class TicketsController {
     @Query('agentId') agentId?: string,
     @Query('status') status?: TicketStatus,
     @Query('licensePlate') licensePlate?: string,
+    @Query('plateLeft') plateLeft?: string,
+    @Query('plateRight') plateRight?: string,
+    @Query('plateType') plateType?: string,
     @Query('reason') reason?: TicketReason,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
@@ -56,6 +60,9 @@ export class TicketsController {
       agentId,
       status,
       licensePlate,
+      plateLeft,
+      plateRight,
+      plateType,
       reason,
       limit: limit ? parseInt(limit, 10) : undefined,
       skip: skip ? parseInt(skip, 10) : undefined,

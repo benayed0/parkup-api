@@ -8,10 +8,8 @@ import {
 export type TicketDocument = Ticket & Document;
 
 export enum TicketReason {
-  NO_SESSION = 'no_session',
-  EXPIRED_SESSION = 'expired_session',
-  OVERSTAYED = 'overstayed',
-  WRONG_ZONE = 'wrong_zone',
+  CAR_SABOT = 'car_sabot',
+  POUND = 'pound',
 }
 
 export enum TicketStatus {

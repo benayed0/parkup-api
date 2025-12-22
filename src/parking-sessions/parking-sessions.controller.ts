@@ -16,6 +16,7 @@ import {
   CreateParkingSessionDto,
   UpdateParkingSessionDto,
   ExtendParkingSessionDto,
+  CheckVehicleDto,
 } from './dto';
 import { ParkingSessionStatus } from './schemas/parking-session.schema';
 
@@ -123,8 +124,25 @@ export class ParkingSessionsController {
   }
 
   /**
-   * Get active sessions by license plate
+   * Check vehicle by structured license plate (POST with JSON body)
+   * POST /parking-sessions/check-vehicle
+   */
+  @Post('check-vehicle')
+  async checkVehicle(@Body() checkDto: CheckVehicleDto) {
+    const sessions = await this.parkingSessionsService.findActiveByPlate(
+      checkDto.plate,
+    );
+    return {
+      success: true,
+      data: sessions,
+      count: sessions.length,
+    };
+  }
+
+  /**
+   * Get active sessions by license plate (legacy - uses URL param)
    * GET /parking-sessions/plate/:licensePlate/active
+   * @deprecated Use POST /parking-sessions/check-vehicle instead
    */
   @Get('plate/:licensePlate/active')
   async findActiveByPlate(@Param('licensePlate') licensePlate: string) {

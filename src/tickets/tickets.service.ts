@@ -95,6 +95,9 @@ export class TicketsService {
     agentId?: string;
     status?: TicketStatus;
     licensePlate?: string;
+    plateLeft?: string;
+    plateRight?: string;
+    plateType?: string;
     reason?: TicketReason;
     limit?: number;
     skip?: number;
@@ -114,6 +117,20 @@ export class TicketsService {
       query.licensePlate = filters.licensePlate
         .toUpperCase()
         .replace(/\s/g, '');
+    }
+    // Partial matching on plate parts (starts-with matching)
+    if (filters?.plateLeft) {
+      // Escape regex special characters and use starts-with
+      const escaped = filters.plateLeft.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query['plate.left'] = { $regex: `^${escaped}`, $options: 'i' };
+    }
+    if (filters?.plateRight) {
+      const escaped = filters.plateRight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      query['plate.right'] = { $regex: `^${escaped}`, $options: 'i' };
+    }
+    // Only filter by type when searching by plate parts
+    if (filters?.plateType && (filters?.plateLeft || filters?.plateRight)) {
+      query['plate.type'] = filters.plateType;
     }
     if (filters?.reason) {
       query.reason = filters.reason;

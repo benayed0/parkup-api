@@ -5,10 +5,8 @@ This module handles parking violation tickets issued when a vehicle is found par
 ## Overview
 
 A ticket is issued by enforcement when:
-- **No Session**: Vehicle parked without any parking session
-- **Expired Session**: Parking session has expired
-- **Overstayed**: Vehicle exceeded maximum allowed duration
-- **Wrong Zone**: Vehicle parked in incorrect zone
+- **Car Sabot**: Vehicle wheel-clamped for violation
+- **Pound**: Vehicle towed/impounded
 
 ## Structure
 
@@ -60,10 +58,8 @@ src/tickets/
 ```typescript
 // Reason why ticket was issued
 enum TicketReason {
-  NO_SESSION = 'no_session',
-  EXPIRED_SESSION = 'expired_session',
-  OVERSTAYED = 'overstayed',
-  WRONG_ZONE = 'wrong_zone',
+  CAR_SABOT = 'car_sabot',
+  POUND = 'pound',
 }
 
 // Current ticket status
@@ -140,17 +136,17 @@ The `GET /` endpoint supports these filters:
 ```typescript
 // POST /api/v1/tickets
 {
-  "meterId": "64abc123...",
   "agentId": "64agent...",            // required - issuing agent
   "licensePlate": "ABC 123",
-  "reason": "expired_session",
+  "reason": "car_sabot",              // car_sabot ($50) or pound ($100)
   "fineAmount": 50,
   "issuedAt": "2024-12-17T10:30:00Z",
   "dueDate": "2024-12-31T23:59:59Z",
-  "parkingSessionId": "64def456...",  // optional
-  "userId": "64ghi789...",            // optional
-  "notes": "Vehicle parked 30 min past expiry",
-  "evidencePhotos": ["https://..."]   // optional
+  "position": {
+    "type": "Point",
+    "coordinates": [10.1234, 36.5678]
+  },
+  "notes": "Vehicle wheel-clamped"    // optional
 }
 
 // Response
