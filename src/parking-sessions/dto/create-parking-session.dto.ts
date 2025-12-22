@@ -10,8 +10,12 @@ import {
   IsArray,
   ArrayMinSize,
   ArrayMaxSize,
+  ValidateNested,
+  ValidateIf,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ParkingSessionStatus } from '../schemas/parking-session.schema';
+import { PlateInputDto } from '../../users/dto/add-vehicle.dto';
 
 export class CreateParkingSessionDto {
   @IsOptional()
@@ -32,9 +36,22 @@ export class CreateParkingSessionDto {
   @IsNumber({}, { each: true })
   coordinates: [number, number]; // [longitude, latitude]
 
+  /**
+   * Structured license plate (preferred)
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PlateInputDto)
+  plate?: PlateInputDto;
+
+  /**
+   * @deprecated Use plate instead
+   * Legacy string format for backward compatibility
+   */
+  @ValidateIf((o) => !o.plate)
   @IsString()
   @IsNotEmpty()
-  licensePlate: string;
+  licensePlate?: string;
 
   @IsDateString()
   startTime: string;

@@ -55,3 +55,18 @@ export class WalletOperationFailedException extends HttpException {
     );
   }
 }
+
+export class UserNotFoundException extends HttpException {
+  constructor(userId?: string) {
+    super(
+      {
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'USER_NOT_FOUND',
+        message: userId
+          ? `User ${userId} not found`
+          : 'User not found',
+      },
+      HttpStatus.NOT_FOUND,
+    );
+  }
+}

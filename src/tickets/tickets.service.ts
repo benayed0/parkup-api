@@ -17,6 +17,11 @@ import {
   PayTicketDto,
   AppealTicketDto,
 } from './dto';
+import {
+  createLicensePlate,
+  parseLicensePlateString,
+  normalizeLicensePlate,
+} from '../shared/license-plate';
 
 @Injectable()
 export class TicketsService {
@@ -55,6 +60,11 @@ export class TicketsService {
   async create(createDto: CreateTicketDto): Promise<TicketDocument> {
     const ticketNumber = await this.generateTicketNumber();
 
+    // Resolve license plate from structured or string format
+    const plate = createDto.plate
+      ? createLicensePlate(createDto.plate.type, createDto.plate.left, createDto.plate.right)
+      : parseLicensePlateString(createDto.licensePlate || '');
+
     const ticket = new this.ticketModel({
       ...createDto,
       ticketNumber,
@@ -69,7 +79,8 @@ export class TicketsService {
         ? new Types.ObjectId(createDto.userId)
         : undefined,
       agentId: new Types.ObjectId(createDto.agentId),
-      licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
+      plate: plate,
+      licensePlate: plate.formatted, // Keep for backward compatibility
       status: TicketStatus.PENDING,
     });
 

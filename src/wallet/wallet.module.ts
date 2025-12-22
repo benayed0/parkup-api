@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { WalletController } from './wallet.controller';
+import { WalletAdminController } from './wallet-admin.controller';
 import { WalletService } from './wallet.service';
 import { Wallet, WalletSchema } from './schemas/wallet.schema';
 import {
@@ -8,6 +9,7 @@ import {
   WalletTransactionSchema,
 } from './schemas/wallet-transaction.schema';
 import { UsersModule } from '../users/users.module';
+import { OperatorsModule } from '../operators/operators.module';
 
 @Module({
   imports: [
@@ -16,8 +18,9 @@ import { UsersModule } from '../users/users.module';
       { name: WalletTransaction.name, schema: WalletTransactionSchema },
     ]),
     forwardRef(() => UsersModule),
+    forwardRef(() => OperatorsModule),
   ],
-  controllers: [WalletController],
+  controllers: [WalletController, WalletAdminController],
   providers: [WalletService],
   exports: [WalletService],
 })

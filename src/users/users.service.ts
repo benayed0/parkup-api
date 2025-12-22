@@ -11,9 +11,15 @@ import { Model } from 'mongoose';
 import { User, UserDocument, Vehicle } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { AddVehicleDto } from './dto/add-vehicle.dto';
+import { AddVehicleDto, PlateInputDto } from './dto/add-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { WalletService } from '../wallet/wallet.service';
+import {
+  LicensePlate,
+  PlateType,
+  createLicensePlate,
+  parseLicensePlateString,
+} from '../shared/license-plate';
 
 @Injectable()
 export class UsersService {
@@ -25,6 +31,24 @@ export class UsersService {
     @Inject(forwardRef(() => WalletService))
     private walletService: WalletService,
   ) {}
+
+  /**
+   * Convert plate input (structured or string) to LicensePlate object
+   */
+  private resolvePlate(
+    plate?: PlateInputDto,
+    licensePlateString?: string,
+  ): LicensePlate {
+    if (plate) {
+      // Use structured input
+      return createLicensePlate(plate.type, plate.left, plate.right);
+    }
+    if (licensePlateString) {
+      // Parse legacy string format
+      return parseLicensePlateString(licensePlateString);
+    }
+    throw new Error('Either plate or licensePlate must be provided');
+  }
 
   /**
    * Create a new user and initialize wallet
@@ -145,12 +169,13 @@ export class UsersService {
     vehicleDto: AddVehicleDto,
   ): Promise<UserDocument> {
     const user = await this.findOne(userId);
-    const normalizedPlate = vehicleDto.licensePlate
-      .toUpperCase()
-      .replace(/\s/g, '');
 
+    // Resolve plate from structured or string format
+    const plate = this.resolvePlate(vehicleDto.plate, vehicleDto.licensePlate);
+
+    // Check for duplicate using formatted string
     const existingVehicle = user.vehicles.find(
-      (v) => v.licensePlate === normalizedPlate,
+      (v) => v.licensePlate === plate.formatted,
     );
 
     if (existingVehicle) {
@@ -160,7 +185,8 @@ export class UsersService {
     }
 
     const newVehicle: Vehicle = {
-      licensePlate: normalizedPlate,
+      plate: plate,
+      licensePlate: plate.formatted, // Keep for backward compatibility
       nickname: vehicleDto.nickname || '',
       isDefault: vehicleDto.isDefault || false,
     };
@@ -184,7 +210,7 @@ export class UsersService {
     updateDto: UpdateVehicleDto,
   ): Promise<UserDocument> {
     const user = await this.findOne(userId);
-    const normalizedPlate = licensePlate.toUpperCase().replace(/\s/g, '');
+    const normalizedPlate = licensePlate.toUpperCase().replace(/\s+/g, ' ').trim();
 
     const vehicleIndex = user.vehicles.findIndex(
       (v) => v.licensePlate === normalizedPlate,
@@ -194,13 +220,13 @@ export class UsersService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    // Check if new license plate already exists (if changing plate)
-    if (updateDto.licensePlate) {
-      const newNormalizedPlate = updateDto.licensePlate
-        .toUpperCase()
-        .replace(/\s/g, '');
+    // Check if updating the plate (either structured or string format)
+    if (updateDto.plate || updateDto.licensePlate) {
+      const newPlate = this.resolvePlate(updateDto.plate, updateDto.licensePlate);
+
+      // Check for duplicates
       const duplicateVehicle = user.vehicles.find(
-        (v, i) => v.licensePlate === newNormalizedPlate && i !== vehicleIndex,
+        (v, i) => v.licensePlate === newPlate.formatted && i !== vehicleIndex,
       );
 
       if (duplicateVehicle) {
@@ -209,7 +235,8 @@ export class UsersService {
         );
       }
 
-      user.vehicles[vehicleIndex].licensePlate = newNormalizedPlate;
+      user.vehicles[vehicleIndex].plate = newPlate;
+      user.vehicles[vehicleIndex].licensePlate = newPlate.formatted;
     }
 
     if (updateDto.nickname !== undefined) {

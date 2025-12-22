@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model, Types } from 'mongoose';
 import { Wallet, WalletDocument } from './schemas/wallet.schema';
@@ -13,7 +13,9 @@ import {
   WalletNotFoundException,
   DuplicateTransactionException,
   WalletOperationFailedException,
+  UserNotFoundException,
 } from './exceptions/wallet.exceptions';
+import { UsersService } from '../users/users.service';
 
 export interface WalletInfo {
   userId: string;
@@ -42,6 +44,8 @@ export class WalletService {
     private transactionModel: Model<WalletTransactionDocument>,
     @InjectConnection()
     private connection: Connection,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
   ) {}
 
   /**
@@ -66,6 +70,7 @@ export class WalletService {
 
   /**
    * Create wallet for a user - idempotent operation
+   * Verifies user exists before creating wallet
    */
   async createWallet(
     userId: string,
@@ -80,6 +85,13 @@ export class WalletService {
 
     if (existingWallet) {
       return existingWallet;
+    }
+
+    // Verify user exists before creating wallet
+    try {
+      await this.usersService.findOne(userId);
+    } catch {
+      throw new UserNotFoundException(userId);
     }
 
     // Create new wallet
@@ -421,5 +433,89 @@ export class WalletService {
       .countDocuments({ userId: new Types.ObjectId(userId) })
       .exec();
     return count > 0;
+  }
+
+  /**
+   * Get all wallets (admin only)
+   */
+  async getAllWallets(options?: {
+    limit?: number;
+    skip?: number;
+  }): Promise<{ wallets: WalletDocument[]; total: number }> {
+    const [wallets, total] = await Promise.all([
+      this.walletModel
+        .find()
+        .populate('userId', 'phone firstName lastName email')
+        .sort({ updatedAt: -1 })
+        .skip(options?.skip || 0)
+        .limit(options?.limit || 50)
+        .exec(),
+      this.walletModel.countDocuments().exec(),
+    ]);
+
+    return { wallets, total };
+  }
+
+  /**
+   * Get all transactions (admin only)
+   */
+  async getAllTransactions(options?: {
+    limit?: number;
+    skip?: number;
+    userId?: string;
+    type?: TransactionType;
+    reason?: TransactionReason;
+  }): Promise<{ transactions: WalletTransactionDocument[]; total: number }> {
+    const query: any = {};
+
+    if (options?.userId) {
+      query.userId = new Types.ObjectId(options.userId);
+    }
+    if (options?.type) {
+      query.type = options.type;
+    }
+    if (options?.reason) {
+      query.reason = options.reason;
+    }
+
+    const [transactions, total] = await Promise.all([
+      this.transactionModel
+        .find(query)
+        .populate('userId', 'phone firstName lastName email')
+        .sort({ createdAt: -1 })
+        .skip(options?.skip || 0)
+        .limit(options?.limit || 50)
+        .exec(),
+      this.transactionModel.countDocuments(query).exec(),
+    ]);
+
+    return { transactions, total };
+  }
+
+  /**
+   * Get wallet by userId (admin only)
+   */
+  async getWalletByUserId(userId: string): Promise<WalletDocument | null> {
+    return this.walletModel
+      .findOne({ userId: new Types.ObjectId(userId) })
+      .populate('userId', 'phone firstName lastName email')
+      .exec();
+  }
+
+  /**
+   * Admin credit wallet for a user
+   */
+  async adminCreditWallet(
+    userId: string,
+    amount: number,
+    reason: TransactionReason,
+  ): Promise<TransactionResult> {
+    // Ensure wallet exists
+    const exists = await this.walletExists(userId);
+    if (!exists) {
+      await this.createWallet(userId);
+    }
+
+    return this.creditWallet(userId, amount, reason);
   }
 }

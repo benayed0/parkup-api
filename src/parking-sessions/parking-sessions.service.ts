@@ -15,6 +15,11 @@ import {
   UpdateParkingSessionDto,
   ExtendParkingSessionDto,
 } from './dto';
+import {
+  createLicensePlate,
+  parseLicensePlateString,
+  normalizeLicensePlate,
+} from '../shared/license-plate';
 
 @Injectable()
 export class ParkingSessionsService {
@@ -35,6 +40,11 @@ export class ParkingSessionsService {
         : undefined
       : undefined;
 
+    // Resolve license plate from structured or string format
+    const plate = createDto.plate
+      ? createLicensePlate(createDto.plate.type, createDto.plate.left, createDto.plate.right)
+      : parseLicensePlateString(createDto.licensePlate || '');
+
     const session = new this.parkingSessionModel({
       userId,
       zoneId: new Types.ObjectId(createDto.zoneId),
@@ -43,7 +53,8 @@ export class ParkingSessionsService {
         type: 'Point',
         coordinates: createDto.coordinates,
       },
-      licensePlate: createDto.licensePlate.toUpperCase().replace(/\s/g, ''),
+      plate: plate,
+      licensePlate: plate.formatted, // Keep for backward compatibility
       startTime: createDto.startTime,
       endTime: createDto.endTime,
       durationMinutes: createDto.durationMinutes,
@@ -77,9 +88,7 @@ export class ParkingSessionsService {
       query.status = filters.status;
     }
     if (filters?.licensePlate) {
-      query.licensePlate = filters.licensePlate
-        .toUpperCase()
-        .replace(/\s/g, '');
+      query.licensePlate = normalizeLicensePlate(filters.licensePlate);
     }
 
     return this.parkingSessionModel
@@ -126,7 +135,7 @@ export class ParkingSessionsService {
   ): Promise<ParkingSessionDocument[]> {
     return this.parkingSessionModel
       .find({
-        licensePlate: licensePlate.toUpperCase().replace(/\s/g, ''),
+        licensePlate: normalizeLicensePlate(licensePlate),
         status: ParkingSessionStatus.ACTIVE,
       })
       .exec();

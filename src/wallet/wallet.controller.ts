@@ -26,6 +26,7 @@ export class WalletController {
    */
   private async ensureWalletExists(userId: string): Promise<void> {
     const exists = await this.walletService.walletExists(userId);
+
     if (!exists) {
       await this.walletService.createWallet(userId);
     }

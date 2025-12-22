@@ -8,12 +8,14 @@ import {
   IsArray,
   Min,
   ValidateNested,
+  ValidateIf,
   IsIn,
   ArrayMinSize,
   ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TicketReason } from '../schemas/ticket.schema';
+import { PlateInputDto } from '../../users/dto/add-vehicle.dto';
 
 // DTO for GeoJSON Point position
 export class PositionDto {
@@ -49,9 +51,22 @@ export class CreateTicketDto {
   @IsNotEmpty()
   agentId: string;
 
+  /**
+   * Structured license plate (preferred)
+   */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PlateInputDto)
+  plate?: PlateInputDto;
+
+  /**
+   * @deprecated Use plate instead
+   * Legacy string format for backward compatibility
+   */
+  @ValidateIf((o) => !o.plate)
   @IsString()
   @IsNotEmpty()
-  licensePlate: string;
+  licensePlate?: string;
 
   @IsEnum(TicketReason)
   reason: TicketReason;

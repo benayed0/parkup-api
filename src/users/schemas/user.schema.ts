@@ -1,10 +1,26 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import {
+  LicensePlate,
+  LicensePlateSchema,
+  PlateType,
+} from '../../shared/license-plate';
 
 export type UserDocument = User & Document;
 
 @Schema({ _id: false })
 export class Vehicle {
+  /**
+   * Structured license plate data
+   * Contains type, category, left/right numbers, and formatted string
+   */
+  @Prop({ type: LicensePlateSchema, required: true })
+  plate: LicensePlate;
+
+  /**
+   * @deprecated Use plate.formatted instead
+   * Kept for backward compatibility and indexing
+   */
   @Prop({ required: true, uppercase: true })
   licensePlate: string;
 
