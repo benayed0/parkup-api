@@ -37,7 +37,7 @@ export class WalletController {
    */
   @Get()
   async getWallet(@Req() req: any) {
-    const userId = req.user.sub || req.user.userId;
+    const userId = req.user._id;
 
     // Lazy wallet creation for existing users without wallets
     await this.ensureWalletExists(userId);
@@ -60,7 +60,7 @@ export class WalletController {
     @Query('limit') limit?: number,
     @Query('skip') skip?: number,
   ) {
-    const userId = req.user.sub || req.user.userId;
+    const userId = req.user._id;
     const transactions = await this.walletService.getTransactions(userId, {
       limit: limit || 50,
       skip: skip || 0,
@@ -80,7 +80,7 @@ export class WalletController {
   @Post('topup')
   @HttpCode(HttpStatus.OK)
   async topup(@Req() req: any, @Body() topupDto: TopupWalletDto) {
-    const userId = req.user.sub || req.user.userId;
+    const userId = req.user._id;
 
     // Lazy wallet creation for existing users without wallets
     await this.ensureWalletExists(userId);
@@ -105,7 +105,7 @@ export class WalletController {
   @Post('pay')
   @HttpCode(HttpStatus.OK)
   async pay(@Req() req: any, @Body() payDto: PayWalletDto) {
-    const userId = req.user.sub || req.user.userId;
+    const userId = req.user._id;
 
     // Ensure wallet exists (but don't create - payment requires existing wallet with balance)
     const exists = await this.walletService.walletExists(userId);
