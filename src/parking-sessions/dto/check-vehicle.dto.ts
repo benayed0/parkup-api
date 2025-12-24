@@ -1,4 +1,4 @@
-import { IsNotEmpty, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LicensePlateDto } from '../../shared/license-plate';
 
@@ -10,4 +10,8 @@ export class CheckVehicleDto {
   @ValidateNested()
   @Type(() => LicensePlateDto)
   plate: LicensePlateDto;
+
+  @IsOptional()
+  @IsString()
+  zoneId?: string;
 }

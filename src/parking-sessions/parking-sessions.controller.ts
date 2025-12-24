@@ -131,6 +131,7 @@ export class ParkingSessionsController {
   async checkVehicle(@Body() checkDto: CheckVehicleDto) {
     const sessions = await this.parkingSessionsService.findActiveByPlate(
       checkDto.plate,
+      checkDto.zoneId,
     );
     return {
       success: true,

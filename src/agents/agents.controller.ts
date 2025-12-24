@@ -8,9 +8,12 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   HttpCode,
   HttpStatus,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { AgentsService } from './agents.service';
 import {
   CreateAgentDto,
@@ -21,7 +24,10 @@ import {
 
 @Controller('agents')
 export class AgentsController {
-  constructor(private readonly agentsService: AgentsService) {}
+  constructor(
+    private readonly agentsService: AgentsService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   /**
    * Create a new agent
@@ -48,6 +54,30 @@ export class AgentsController {
       success: true,
       data: result,
     };
+  }
+
+  /**
+   * Get current agent from JWT token
+   * GET /agents/me
+   */
+  @Get('me')
+  async getMe(@Headers('authorization') authHeader: string) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('No token provided');
+    }
+
+    const token = authHeader.substring(7);
+
+    try {
+      const payload = this.jwtService.verify(token);
+      const agent = await this.agentsService.validateFromToken(payload);
+      return {
+        success: true,
+        data: { agent },
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
   }
 
   /**

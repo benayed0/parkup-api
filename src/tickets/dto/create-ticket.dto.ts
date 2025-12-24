@@ -51,6 +51,10 @@ export class CreateTicketDto {
   @IsNotEmpty()
   agentId: string;
 
+  @IsString()
+  @IsNotEmpty()
+  parkingZoneId: string;
+
   /**
    * Structured license plate (preferred)
    */

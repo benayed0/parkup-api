@@ -8,7 +8,7 @@ export class ParkingZone {
   @Prop({ required: true, unique: true, uppercase: true })
   code: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, unique: true })
   name: string;
 
   @Prop({

@@ -136,12 +136,15 @@ export class ParkingSessionsService {
    * Uses $or query to match both structured fields AND legacy formatted string
    * This is more efficient than separate queries
    */
-  async findActiveByPlate(plate: {
-    type: string;
-    left?: string;
-    right?: string;
-    formatted?: string;
-  }): Promise<ParkingSessionDocument[]> {
+  async findActiveByPlate(
+    plate: {
+      type: string;
+      left?: string;
+      right?: string;
+      formatted?: string;
+    },
+    zoneId?: string,
+  ): Promise<ParkingSessionDocument[]> {
     const now = new Date();
 
     // Build structured plate query
@@ -179,10 +182,15 @@ export class ParkingSessionsService {
       return [];
     }
 
-    const query = {
+    const query: Record<string, any> = {
       endTime: { $gt: now },
       $or: orConditions,
     };
+
+    // Filter by zoneId if provided
+    if (zoneId) {
+      query.zoneId = new Types.ObjectId(zoneId);
+    }
 
     return this.parkingSessionModel.find(query).exec();
   }

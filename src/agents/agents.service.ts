@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { JwtService } from '@nestjs/jwt';
 import { Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { Agent, AgentDocument } from './schemas/agent.schema';
@@ -21,6 +22,7 @@ export class AgentsService {
   constructor(
     @InjectModel(Agent.name)
     private agentModel: Model<AgentDocument>,
+    private jwtService: JwtService,
   ) {}
 
   /**
@@ -64,7 +66,7 @@ export class AgentsService {
    */
   async login(
     loginDto: LoginAgentDto,
-  ): Promise<{ agent: AgentDocument; token?: string }> {
+  ): Promise<{ agent: AgentDocument; token: string }> {
     const agent = await this.agentModel
       .findOne({ username: loginDto.username.toLowerCase() })
       .select('+password')
@@ -92,9 +94,42 @@ export class AgentsService {
     const result = agent.toObject();
     delete result.password;
 
-    // Note: JWT token generation can be added here if needed
-    // For now, returning agent data only
-    return { agent: result as AgentDocument };
+    // Generate JWT token
+    const payload = {
+      sub: agent._id.toString(),
+      username: agent.username,
+      type: 'agent',
+    };
+    const token = this.jwtService.sign(payload);
+
+    return { agent: result as AgentDocument, token };
+  }
+
+  /**
+   * Validate agent from JWT payload
+   */
+  async validateFromToken(payload: {
+    sub: string;
+    type: string;
+  }): Promise<AgentDocument> {
+    if (payload.type !== 'agent') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    const agent = await this.agentModel
+      .findById(payload.sub)
+      .populate('assignedZones')
+      .exec();
+
+    if (!agent) {
+      throw new UnauthorizedException('Agent not found');
+    }
+
+    if (!agent.isActive) {
+      throw new UnauthorizedException('Agent account is deactivated');
+    }
+
+    return agent;
   }
 
   /**

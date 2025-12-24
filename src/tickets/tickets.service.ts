@@ -62,7 +62,11 @@ export class TicketsService {
 
     // Resolve license plate from structured or string format
     const plate = createDto.plate
-      ? createLicensePlate(createDto.plate.type, createDto.plate.left, createDto.plate.right)
+      ? createLicensePlate(
+          createDto.plate.type,
+          createDto.plate.left,
+          createDto.plate.right,
+        )
       : parseLicensePlateString(createDto.licensePlate || '');
 
     const ticket = new this.ticketModel({
@@ -79,6 +83,7 @@ export class TicketsService {
         ? new Types.ObjectId(createDto.userId)
         : undefined,
       agentId: new Types.ObjectId(createDto.agentId),
+      parkingZoneId: new Types.ObjectId(createDto.parkingZoneId),
       plate: plate,
       licensePlate: plate.formatted, // Keep for backward compatibility
       status: TicketStatus.PENDING,
