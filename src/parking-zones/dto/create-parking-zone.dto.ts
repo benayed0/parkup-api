@@ -31,4 +31,14 @@ export class CreateParkingZoneDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsNumber()
+  hourlyRate: number;
+
+  @IsString()
+  @IsNotEmpty()
+  operatingHours: string;
+
+  @IsNotEmpty()
+  prices: { car_sabot: number; pound: number };
 }

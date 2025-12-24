@@ -14,10 +14,52 @@ export class ParkingZonesService {
     private parkingZoneModel: Model<ParkingZoneDocument>,
   ) {}
 
+  /**
+   * Fetch boundaries from Nominatim API for a given place name
+   */
+  private async fetchBoundariesFromNominatim(
+    placeName: string,
+  ): Promise<number[][] | null> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(placeName)}&format=json&polygon_geojson=1`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'ParkUp/1.0' }, // Required by Nominatim
+      });
+      const data = await response.json();
+
+      // Find the result with a Polygon boundary (administrative boundary)
+      const boundaryResult = data.find(
+        (r: any) => r.geojson?.type === 'Polygon' && r.class === 'boundary',
+      );
+      console.log(data);
+
+      if (boundaryResult?.geojson?.coordinates?.[0]) {
+        return boundaryResult.geojson.coordinates[0];
+      }
+      return null;
+    } catch (error) {
+      console.error(`Failed to fetch boundaries for ${placeName}:`, error);
+      return null;
+    }
+  }
+
   async create(createDto: CreateParkingZoneDto): Promise<ParkingZoneDocument> {
+    const boundaries = await this.fetchBoundariesFromNominatim(
+      `${createDto.name}`,
+    );
+    if (!boundaries) {
+      throw new NotFoundException(
+        `Could not fetch boundaries for zone ${createDto.name}`,
+      );
+    }
     const zone = new this.parkingZoneModel({
       ...createDto,
       code: createDto.code.toUpperCase().replace(/\s/g, ''),
+      location: {
+        type: 'Point',
+        coordinates: createDto.coordinates,
+      },
+      boundaries: boundaries,
     });
     return zone.save();
   }

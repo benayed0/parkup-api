@@ -26,6 +26,14 @@ export class ParkingZone {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
   };
+  @Prop({ required: true, type: Array<Number[]> })
+  boundaries: number[][]; // Array of [longitude, latitude] pairs
+  @Prop({ required: true })
+  hourlyRate: number;
+  @Prop({ required: true })
+  operatingHours: string;
+  @Prop({ required: true, type: Object })
+  prices: { car_sabot: number; pound: number };
   @Prop()
   description?: string;
 
