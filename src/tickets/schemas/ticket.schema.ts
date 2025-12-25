@@ -13,6 +13,7 @@ export enum TicketStatus {
   PENDING = 'pending',
   PAID = 'paid',
   APPEALED = 'appealed',
+  SABOT_REMOVED = 'sabot_removed',
   DISMISSED = 'dismissed',
   OVERDUE = 'overdue',
 }

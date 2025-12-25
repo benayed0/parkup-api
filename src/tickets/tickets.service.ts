@@ -372,6 +372,19 @@ export class TicketsService {
       .exec();
 
     return updatedTicket!;
+  } /**
+   * Remove a sabotaged ticket
+   */
+  async sabotRemove(id: string): Promise<TicketDocument> {
+    const updatedTicket = await this.ticketModel
+      .findByIdAndUpdate(
+        id,
+        { status: TicketStatus.SABOT_REMOVED },
+        { new: true },
+      )
+      .exec();
+
+    return updatedTicket!;
   }
 
   /**

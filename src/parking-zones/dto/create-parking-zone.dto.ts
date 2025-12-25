@@ -41,4 +41,8 @@ export class CreateParkingZoneDto {
 
   @IsNotEmpty()
   prices: { car_sabot: number; pound: number };
+
+  @IsOptional()
+  @IsNumber()
+  numberOfPlaces?: number;
 }

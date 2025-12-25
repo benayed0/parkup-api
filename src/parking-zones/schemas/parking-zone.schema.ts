@@ -34,6 +34,10 @@ export class ParkingZone {
   operatingHours: string;
   @Prop({ required: true, type: Object })
   prices: { car_sabot: number; pound: number };
+
+  @Prop({ required: true, default: 0 })
+  numberOfPlaces: number;
+
   @Prop()
   description?: string;
 

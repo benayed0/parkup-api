@@ -258,6 +258,17 @@ export class TicketsController {
       success: true,
       data: ticket,
     };
+  } /**
+   * Dismiss a ticket (admin action)
+   * PATCH /tickets/:id/sabot_removed
+   */
+  @Patch(':id/sabot_removed')
+  async sabotRemove(@Param('id') id: string) {
+    const ticket = await this.ticketsService.sabotRemove(id);
+    return {
+      success: true,
+      data: ticket,
+    };
   }
 
   /**
