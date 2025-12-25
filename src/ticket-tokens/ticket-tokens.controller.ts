@@ -27,7 +27,7 @@ export class TicketTokensController {
   ) {
     this.clientBaseUrl =
       this.configService.get<string>('CLIENT_BASE_URL') ||
-      'http://localhost:3001';
+      'http://localhost:62919';
   }
 
   /**
@@ -62,6 +62,10 @@ export class TicketTokensController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
+    console.log('[VerifyEndpoint] Full URL:', req.url);
+    console.log('[VerifyEndpoint] Token param:', token);
+    console.log('[VerifyEndpoint] Token param length:', token.length);
+
     const clientIp =
       req.headers['x-forwarded-for']?.toString() ||
       req.socket.remoteAddress ||
@@ -76,12 +80,13 @@ export class TicketTokensController {
 
     if (!result.valid) {
       // Redirect to client error page
-      const errorUrl = `${this.clientBaseUrl}/ticket/error?code=${result.errorCode}&message=${encodeURIComponent(result.error || 'Unknown error')}`;
+      const errorUrl = `${this.clientBaseUrl}/tickets/error?code=${result.errorCode}&message=${encodeURIComponent(result.error || 'Unknown error')}`;
       return res.redirect(HttpStatus.FOUND, errorUrl);
     }
 
-    // Redirect to client ticket page with the ticket ID
-    const successUrl = `${this.clientBaseUrl}/ticket/${result.ticketId}`;
+    // Redirect to client ticket page with the secure token (not raw ticketId)
+    // This prevents URL guessing attacks and keeps the ticketId hidden
+    const successUrl = `${this.clientBaseUrl}/tickets/t/${token}`;
     return res.redirect(HttpStatus.FOUND, successUrl);
   }
 
@@ -90,6 +95,9 @@ export class TicketTokensController {
    */
   @Get('verify/:token/json')
   async verifyTokenJson(@Param('token') token: string, @Req() req: Request) {
+    console.log('[VerifyJSON] Token received:', token);
+    console.log('[VerifyJSON] Token length:', token.length);
+
     const clientIp =
       req.headers['x-forwarded-for']?.toString() ||
       req.socket.remoteAddress ||
@@ -102,7 +110,10 @@ export class TicketTokensController {
       userAgent,
     );
 
+    console.log('[VerifyJSON] Result:', result);
+
     if (!result.valid) {
+      console.log('[VerifyJSON] Returning error:', result.error);
       return {
         success: false,
         error: result.error,
@@ -110,6 +121,7 @@ export class TicketTokensController {
       };
     }
 
+    console.log('[VerifyJSON] Returning success for ticketId:', result.ticketId);
     return {
       success: true,
       data: {
@@ -196,6 +208,20 @@ export class TicketTokensController {
     return {
       success: true,
       message: 'Token revoked successfully',
+    };
+  }
+
+  /**
+   * Manually trigger cleanup of old expired/revoked tokens (admin use)
+   */
+  @Post('cleanup')
+  async cleanupTokens() {
+    const result = await this.ticketTokensService.manualCleanup();
+
+    return {
+      success: true,
+      message: `Cleanup completed: ${result.deletedCount} tokens deleted`,
+      deletedCount: result.deletedCount,
     };
   }
 }

@@ -11,7 +11,10 @@ export class QrCodesService {
     private readonly parkingZonesService: ParkingZonesService,
     private readonly configService: ConfigService,
   ) {
-    this.baseUrl = 'http://localhost:57852'; //this.configService.get<string>('APP_BASE_URL', 'https://parkup.app');
+    this.baseUrl = this.configService.get<string>(
+      'APP_BASE_URL',
+      'http://localhost:3000',
+    );
   }
 
   async generateQrCode(

@@ -2,10 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import * as crypto from 'crypto';
 import * as QRCode from 'qrcode';
 import {
@@ -30,21 +32,22 @@ export interface GeneratedTokenResult {
 
 @Injectable()
 export class TicketTokensService {
+  private readonly logger = new Logger(TicketTokensService.name);
   private readonly tokenSecret: string;
   private readonly baseUrl: string;
   private readonly defaultExpirationDays: number = 365; // Tokens valid for 1 year by default
+  private readonly cleanupRetentionDays: number = 30; // Keep revoked/expired tokens for 30 days
 
   constructor(
     @InjectModel(TicketToken.name)
     private ticketTokenModel: Model<TicketTokenDocument>,
     private configService: ConfigService,
   ) {
-    this.tokenSecret =
-      this.configService.get<string>('TICKET_TOKEN_SECRET') ||
-      this.configService.get<string>('JWT_SECRET') ||
-      'default-secret-change-in-production';
-    this.baseUrl =
-      this.configService.get<string>('APP_BASE_URL') || 'http://localhost:3000';
+    this.tokenSecret = this.configService.get<string>('TICKET_TOKEN_SECRET');
+    this.baseUrl = this.configService.get<string>(
+      'APP_BASE_URL',
+      'http://localhost:3000',
+    );
   }
 
   /**
@@ -55,6 +58,12 @@ export class TicketTokensService {
     const randomBytes = crypto.randomBytes(16).toString('hex');
     const payload = `${ticketId}:${timestamp}:${randomBytes}`;
 
+    console.log('[TokenGenerate] Generating token for ticketId:', ticketId);
+    console.log('[TokenGenerate] Token secret exists:', !!this.tokenSecret);
+    console.log('[TokenGenerate] Token secret length:', this.tokenSecret?.length);
+    console.log('[TokenGenerate] Token secret (first 4 chars):', this.tokenSecret?.substring(0, 4));
+    console.log('[TokenGenerate] Payload:', payload);
+
     // Create HMAC signature for integrity verification
     const signature = crypto
       .createHmac('sha256', this.tokenSecret)
@@ -62,8 +71,12 @@ export class TicketTokensService {
       .digest('hex')
       .substring(0, 16);
 
+    console.log('[TokenGenerate] Generated signature:', signature);
+
     // Combine into a URL-safe token
     const token = Buffer.from(`${payload}:${signature}`).toString('base64url');
+
+    console.log('[TokenGenerate] Final token:', token);
 
     return token;
   }
@@ -76,28 +89,46 @@ export class TicketTokensService {
     ticketId?: string;
   } {
     try {
+      console.log('[TokenVerify] Raw token received:', token);
+      console.log('[TokenVerify] Token length:', token.length);
+      console.log('[TokenVerify] Token secret exists:', !!this.tokenSecret);
+      console.log('[TokenVerify] Token secret length:', this.tokenSecret?.length);
+      console.log('[TokenVerify] Token secret (first 4 chars):', this.tokenSecret?.substring(0, 4));
+
       const decoded = Buffer.from(token, 'base64url').toString('utf-8');
+      console.log('[TokenVerify] Decoded token:', decoded);
+
       const parts = decoded.split(':');
+      console.log('[TokenVerify] Parts count:', parts.length);
+      console.log('[TokenVerify] Parts:', parts);
 
       if (parts.length !== 4) {
+        console.log('[TokenVerify] FAILED: Expected 4 parts, got', parts.length);
         return { valid: false };
       }
 
       const [ticketId, timestamp, randomBytes, providedSignature] = parts;
       const payload = `${ticketId}:${timestamp}:${randomBytes}`;
+      console.log('[TokenVerify] Payload for signature:', payload);
+      console.log('[TokenVerify] Provided signature:', providedSignature);
 
       const expectedSignature = crypto
         .createHmac('sha256', this.tokenSecret)
         .update(payload)
         .digest('hex')
         .substring(0, 16);
+      console.log('[TokenVerify] Expected signature:', expectedSignature);
+      console.log('[TokenVerify] Signatures match:', providedSignature === expectedSignature);
 
       if (providedSignature !== expectedSignature) {
+        console.log('[TokenVerify] FAILED: Signature mismatch');
         return { valid: false };
       }
 
+      console.log('[TokenVerify] SUCCESS: Token valid for ticketId:', ticketId);
       return { valid: true, ticketId };
-    } catch {
+    } catch (error) {
+      console.log('[TokenVerify] FAILED: Exception caught:', error);
       return { valid: false };
     }
   }
@@ -347,5 +378,52 @@ export class TicketTokensService {
         light: '#FFFFFF',
       },
     });
+  }
+
+  /**
+   * Cleanup old expired and revoked tokens
+   * Runs every day at 3:00 AM
+   */
+  @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  async cleanupOldTokens(): Promise<void> {
+    this.logger.log('Starting ticket token cleanup job...');
+
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - this.cleanupRetentionDays);
+
+    try {
+      // Delete tokens that are expired or revoked AND older than retention period
+      const result = await this.ticketTokenModel.deleteMany({
+        $or: [
+          { status: TokenStatus.EXPIRED },
+          { status: TokenStatus.REVOKED },
+        ],
+        updatedAt: { $lt: cutoffDate },
+      });
+
+      this.logger.log(
+        `Token cleanup completed: ${result.deletedCount} tokens deleted`,
+      );
+    } catch (error) {
+      this.logger.error('Token cleanup failed:', error);
+    }
+  }
+
+  /**
+   * Manually trigger cleanup (for admin use)
+   */
+  async manualCleanup(): Promise<{ deletedCount: number }> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - this.cleanupRetentionDays);
+
+    const result = await this.ticketTokenModel.deleteMany({
+      $or: [
+        { status: TokenStatus.EXPIRED },
+        { status: TokenStatus.REVOKED },
+      ],
+      updatedAt: { $lt: cutoffDate },
+    });
+
+    return { deletedCount: result.deletedCount };
   }
 }
