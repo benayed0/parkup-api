@@ -9,6 +9,7 @@ import { QrCodesModule } from './qr-codes/qr-codes.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
+import { TicketTokensModule } from './ticket-tokens/ticket-tokens.module';
 import { AgentsModule } from './agents/agents.module';
 import { StreetsModule } from './streets/streets.module';
 import { OperatorsModule } from './operators/operators.module';
@@ -32,6 +33,7 @@ import { WalletModule } from './wallet/wallet.module';
     UsersModule,
     AuthModule,
     TicketsModule,
+    TicketTokensModule,
     AgentsModule,
     StreetsModule,
     OperatorsModule,

@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -20,14 +22,26 @@ import {
 import {
   createLicensePlate,
   parseLicensePlateString,
-  normalizeLicensePlate,
 } from '../shared/license-plate';
+import { TicketTokensService } from '../ticket-tokens/ticket-tokens.service';
+
+export interface TicketWithQrCode {
+  ticket: TicketDocument;
+  qrCode: {
+    token: string;
+    qrCodeDataUrl: string;
+    qrCodeContent: string;
+    expiresAt: Date;
+  };
+}
 
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectModel(Ticket.name)
     private ticketModel: Model<TicketDocument>,
+    @Inject(forwardRef(() => TicketTokensService))
+    private ticketTokensService: TicketTokensService,
   ) {}
 
   /**
@@ -90,6 +104,26 @@ export class TicketsService {
     });
 
     return ticket.save();
+  }
+
+  /**
+   * Create a new ticket with QR code
+   * Returns both the ticket and the QR code for printing
+   */
+  async createWithQrCode(
+    createDto: CreateTicketDto,
+  ): Promise<TicketWithQrCode> {
+    const ticket = await this.create(createDto);
+
+    // Generate secure token and QR code for the ticket
+    const qrCodeResult = await this.ticketTokensService.generateTokenForTicket(
+      ticket._id.toString(),
+    );
+
+    return {
+      ticket,
+      qrCode: qrCodeResult,
+    };
   }
 
   /**
@@ -318,6 +352,9 @@ export class TicketsService {
       )
       .exec();
 
+    // Revoke the ticket token since ticket is now paid
+    await this.ticketTokensService.revokeToken(id);
+
     return updatedTicket!;
   }
 
@@ -370,6 +407,9 @@ export class TicketsService {
     const updatedTicket = await this.ticketModel
       .findByIdAndUpdate(id, { status: TicketStatus.DISMISSED }, { new: true })
       .exec();
+
+    // Revoke the ticket token since ticket is now dismissed
+    await this.ticketTokensService.revokeToken(id);
 
     return updatedTicket!;
   } /**
@@ -493,5 +533,41 @@ export class TicketsService {
         unpaidFines: 0,
       }
     );
+  }
+
+  /**
+   * Get or generate QR code for an existing ticket
+   */
+  async getQrCode(id: string): Promise<{
+    token: string;
+    qrCodeDataUrl: string;
+    qrCodeContent: string;
+    expiresAt: Date;
+  }> {
+    // Verify ticket exists
+    await this.findOne(id);
+
+    // Generate or get existing token
+    return this.ticketTokensService.generateTokenForTicket(id);
+  }
+
+  /**
+   * Get QR code as image buffer for printing
+   */
+  async getQrCodeImage(
+    id: string,
+    size?: number,
+  ): Promise<{
+    buffer: Buffer;
+    content: string;
+  }> {
+    // Verify ticket exists
+    await this.findOne(id);
+
+    // Ensure token exists first
+    await this.ticketTokensService.generateTokenForTicket(id);
+
+    // Get buffer
+    return this.ticketTokensService.getQrCodeBuffer(id, size);
   }
 }

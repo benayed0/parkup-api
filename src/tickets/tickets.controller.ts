@@ -10,7 +10,9 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { TicketsService } from './tickets.service';
 import {
   CreateTicketDto,
@@ -34,6 +36,22 @@ export class TicketsController {
     return {
       success: true,
       data: ticket,
+    };
+  }
+
+  /**
+   * Create a new ticket with QR code for printing
+   * POST /tickets/with-qr
+   */
+  @Post('with-qr')
+  async createWithQrCode(@Body() createDto: CreateTicketDto) {
+    const result = await this.ticketsService.createWithQrCode(createDto);
+    return {
+      success: true,
+      data: {
+        ticket: result.ticket,
+        qrCode: result.qrCode,
+      },
     };
   }
 
@@ -193,6 +211,43 @@ export class TicketsController {
       success: true,
       data: ticket,
     };
+  }
+
+  /**
+   * Get QR code for a ticket (as JSON with data URL)
+   * GET /tickets/:id/qr
+   */
+  @Get(':id/qr')
+  async getQrCode(@Param('id') id: string) {
+    const qrCode = await this.ticketsService.getQrCode(id);
+    return {
+      success: true,
+      data: qrCode,
+    };
+  }
+
+  /**
+   * Get QR code for a ticket as PNG image (for printing)
+   * GET /tickets/:id/qr/image?size=300
+   */
+  @Get(':id/qr/image')
+  async getQrCodeImage(
+    @Param('id') id: string,
+    @Query('size') size: string,
+    @Res() res: Response,
+  ) {
+    const qrSize = size ? parseInt(size, 10) : 300;
+    const validSize = Math.min(Math.max(qrSize, 100), 1000);
+
+    const result = await this.ticketsService.getQrCodeImage(id, validSize);
+
+    res.set({
+      'Content-Type': 'image/png',
+      'Content-Length': result.buffer.length,
+      'Cache-Control': 'public, max-age=3600',
+    });
+
+    return res.send(result.buffer);
   }
 
   /**
