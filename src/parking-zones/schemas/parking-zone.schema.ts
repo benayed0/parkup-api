@@ -26,7 +26,7 @@ export class ParkingZone {
     type: 'Point';
     coordinates: [number, number]; // [longitude, latitude]
   };
-  @Prop({ required: true, type: Array<Number[]> })
+  @Prop({ required: true, type: Array<number[]> })
   boundaries: number[][]; // Array of [longitude, latitude] pairs
   @Prop({ required: true })
   hourlyRate: number;

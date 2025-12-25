@@ -1,9 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import {
-  LicensePlate,
-  LicensePlateSchema,
-} from '../../shared/license-plate';
+import { LicensePlate, LicensePlateSchema } from '../../shared/license-plate';
 
 export type ParkingSessionDocument = ParkingSession & Document;
 

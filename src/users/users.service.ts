@@ -210,7 +210,10 @@ export class UsersService {
     updateDto: UpdateVehicleDto,
   ): Promise<UserDocument> {
     const user = await this.findOne(userId);
-    const normalizedPlate = licensePlate.toUpperCase().replace(/\s+/g, ' ').trim();
+    const normalizedPlate = licensePlate
+      .toUpperCase()
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const vehicleIndex = user.vehicles.findIndex(
       (v) => v.licensePlate === normalizedPlate,
@@ -222,7 +225,10 @@ export class UsersService {
 
     // Check if updating the plate (either structured or string format)
     if (updateDto.plate || updateDto.licensePlate) {
-      const newPlate = this.resolvePlate(updateDto.plate, updateDto.licensePlate);
+      const newPlate = this.resolvePlate(
+        updateDto.plate,
+        updateDto.licensePlate,
+      );
 
       // Check for duplicates
       const duplicateVehicle = user.vehicles.find(

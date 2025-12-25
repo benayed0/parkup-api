@@ -62,9 +62,7 @@ export class UserNotFoundException extends HttpException {
       {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'USER_NOT_FOUND',
-        message: userId
-          ? `User ${userId} not found`
-          : 'User not found',
+        message: userId ? `User ${userId} not found` : 'User not found',
       },
       HttpStatus.NOT_FOUND,
     );

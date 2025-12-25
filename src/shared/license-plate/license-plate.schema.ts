@@ -118,14 +118,18 @@ function detectPlateType(formatted: string): PlateType {
   // Diplomatic labels
   if (formatted.includes('ر ب د') || formatted.includes('CMD'))
     return PlateType.CMD;
-  if (formatted.includes('س د') || formatted.includes('CD')) return PlateType.CD;
-  if (formatted.includes('ب د') || formatted.includes('MD')) return PlateType.MD;
+  if (formatted.includes('س د') || formatted.includes('CD'))
+    return PlateType.CD;
+  if (formatted.includes('ب د') || formatted.includes('MD'))
+    return PlateType.MD;
   if (formatted.includes('م ا ف') || formatted.includes('PAT'))
     return PlateType.PAT;
 
   // Consular labels
-  if (formatted.includes('س ق') || formatted.includes('CC')) return PlateType.CC;
-  if (formatted.includes('ث ق') || formatted.includes('MC')) return PlateType.MC;
+  if (formatted.includes('س ق') || formatted.includes('CC'))
+    return PlateType.CC;
+  if (formatted.includes('ث ق') || formatted.includes('MC'))
+    return PlateType.MC;
 
   // Check for EU pattern (letters-numbers-letters)
   if (/^[A-Z]{1,3}[-\s]?\d+[-\s]?[A-Z]{1,3}$/.test(formatted)) {

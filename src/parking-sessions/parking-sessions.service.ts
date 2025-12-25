@@ -153,10 +153,14 @@ export class ParkingSessionsService {
       structuredQuery['plate.type'] = plate.type;
     }
     if (plate.left) {
-      structuredQuery['plate.left'] = plate.left.toUpperCase().replace(/\s/g, '');
+      structuredQuery['plate.left'] = plate.left
+        .toUpperCase()
+        .replace(/\s/g, '');
     }
     if (plate.right) {
-      structuredQuery['plate.right'] = plate.right.toUpperCase().replace(/\s/g, '');
+      structuredQuery['plate.right'] = plate.right
+        .toUpperCase()
+        .replace(/\s/g, '');
     }
 
     // Build formatted string query for legacy data
@@ -169,7 +173,7 @@ export class ParkingSessionsService {
     const hasStructured = Object.keys(structuredQuery).length > 0;
     const hasFormatted = Object.keys(formattedQuery).length > 0;
 
-    let orConditions: Record<string, any>[] = [];
+    const orConditions: Record<string, any>[] = [];
     if (hasStructured) {
       orConditions.push(structuredQuery);
     }

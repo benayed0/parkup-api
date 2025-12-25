@@ -1,4 +1,9 @@
-import { IsString, IsOptional, IsBoolean, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { PlateInputDto } from './add-vehicle.dto';
 
