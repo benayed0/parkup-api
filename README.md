@@ -1082,7 +1082,29 @@ This project is [MIT licensed](LICENSE).
 
 ## Support
 
-For questions or issues, please refer to:
+### Reporting Issues
+
+If you encounter a bug or have a feature request:
+1. Check [existing issues](https://github.com/benayed0/parkup-api/issues) to avoid duplicates
+2. Create a [new issue](https://github.com/benayed0/parkup-api/issues/new) with:
+   - Clear description of the problem or feature
+   - Steps to reproduce (for bugs)
+   - Expected vs actual behavior
+   - Environment details (Node version, OS, etc.)
+
+### Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### External Resources
+
+For framework and technology documentation:
 - NestJS Documentation: [https://docs.nestjs.com](https://docs.nestjs.com)
 - MongoDB Documentation: [https://docs.mongodb.com](https://docs.mongodb.com)
+- Mongoose ODM: [https://mongoosejs.com](https://mongoosejs.com)
 - Stripe API: [https://stripe.com/docs/api](https://stripe.com/docs/api)
