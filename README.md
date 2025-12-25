@@ -26,6 +26,11 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Documentation
+
+- **[BACKEND_GUIDE.md](./BACKEND_GUIDE.md)** - Complete API reference for all endpoints
+- **[FLUTTER_TICKET_API.md](./FLUTTER_TICKET_API.md)** - Flutter-specific documentation for ticket operations (get ticket by ID, pay ticket)
+
 ## Installation
 
 ```bash
