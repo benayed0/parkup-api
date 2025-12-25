@@ -18,14 +18,16 @@ A smart parking management system API built with [NestJS](https://nestjs.com/) a
    - [Vehicle Endpoints](#vehicle-endpoints)
    - [Parking Endpoints](#parking-endpoints)
    - [Ticket Endpoints](#ticket-endpoints)
+   - [Ticket Token Endpoints](#ticket-token-endpoints)
    - [Payment Endpoints](#payment-endpoints)
 7. [Agents Module](#agents-module)
 8. [Tickets Module](#tickets-module)
-9. [Error Handling](#error-handling)
-10. [Implementation Checklist](#implementation-checklist)
-11. [Tech Stack](#tech-stack)
-12. [Security](#security)
-13. [License](#license)
+9. [Ticket Tokens Module](#ticket-tokens-module)
+10. [Error Handling](#error-handling)
+11. [Implementation Checklist](#implementation-checklist)
+12. [Tech Stack](#tech-stack)
+13. [Security](#security)
+14. [License](#license)
 
 ---
 
@@ -109,6 +111,11 @@ FACEBOOK_APP_SECRET=your_facebook_app_secret
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_PUBLISHABLE_KEY=pk_test_...
 
+# Ticket Tokens (Secure QR Codes)
+TICKET_TOKEN_SECRET=your_secure_random_secret_min_32_chars
+APP_BASE_URL=https://api.parkup.tn
+CLIENT_BASE_URL=https://app.parkup.tn
+
 # App
 BASE_URL=https://api.parkup.tn
 API_VERSION=v1
@@ -143,7 +150,9 @@ src/
 ├── parking-zones/       # Zone and meter management
 ├── payments/            # Payment processing
 ├── tickets/             # Violation ticket issuance
+├── ticket-tokens/       # Secure QR code tokens for tickets
 ├── users/               # User profile and vehicle management
+├── wallet/              # User wallet management
 └── shared/              # Common utilities, guards, decorators
 ```
 
@@ -733,6 +742,120 @@ Verify ticket by QR code (for parking agents).
 
 ---
 
+### Ticket Token Endpoints
+
+Secure token-based QR codes for fine tickets. Tokens use HMAC-SHA256 signatures to prevent forgery and URL guessing attacks.
+
+#### POST /ticket-tokens/generate
+
+Generate a secure token and QR code for a ticket.
+
+**Request:**
+```json
+{
+  "ticketId": "64abc123...",
+  "expirationDays": 365
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "Njk0YTM4MDM4OWUy...",
+    "qrCodeDataUrl": "data:image/png;base64,...",
+    "qrCodeContent": "https://api.parkup.tn/api/v1/ticket-tokens/verify/Njk0YTM4...",
+    "expiresAt": "2025-12-25T00:00:00Z"
+  }
+}
+```
+
+---
+
+#### GET /ticket-tokens/verify/{token}
+
+Verify a token (browser redirect). Redirects to client app with ticket details or error.
+
+**Success Redirect:** `{CLIENT_BASE_URL}/tickets/t/{token}`
+
+**Error Redirect:** `{CLIENT_BASE_URL}/tickets/error?code={errorCode}&message={message}`
+
+---
+
+#### GET /ticket-tokens/verify/{token}/json
+
+Verify a token and return JSON (for API clients/mobile apps).
+
+**Response (200) - Success:**
+```json
+{
+  "success": true,
+  "data": {
+    "ticketId": "64abc123..."
+  }
+}
+```
+
+**Response (200) - Error:**
+```json
+{
+  "success": false,
+  "error": "Token has expired",
+  "errorCode": "TOKEN_EXPIRED"
+}
+```
+
+**Error Codes:**
+| Code | Description |
+|------|-------------|
+| `INVALID_SIGNATURE` | Token signature verification failed (tampered/forged) |
+| `TOKEN_NOT_FOUND` | Token doesn't exist in database |
+| `TOKEN_REVOKED` | Token was revoked (ticket paid/dismissed) |
+| `TOKEN_EXPIRED` | Token has expired |
+
+---
+
+#### GET /ticket-tokens/qr/{ticketId}/image
+
+Get QR code as PNG image (for printing).
+
+**Query params:**
+- `size` (optional): Image size in pixels (100-1000, default 300)
+
+**Response:** PNG image with `Content-Type: image/png`
+
+---
+
+#### POST /ticket-tokens/revoke/{ticketId}
+
+Revoke all tokens for a ticket (called automatically when ticket is paid/dismissed).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Token revoked successfully"
+}
+```
+
+---
+
+#### POST /ticket-tokens/cleanup
+
+Manually trigger cleanup of old expired/revoked tokens (admin use).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Cleanup completed: 42 tokens deleted",
+  "deletedCount": 42
+}
+```
+
+---
+
 ### Payment Endpoints
 
 #### GET /payments/methods
@@ -957,6 +1080,108 @@ POST /api/v1/tickets
   "dueDate": "2024-12-31T23:59:59Z",
   "notes": "Vehicle wheel-clamped"
 }
+```
+
+---
+
+## Ticket Tokens Module
+
+The Ticket Tokens module provides secure, cryptographically-signed tokens for fine ticket QR codes. This prevents URL guessing attacks and ensures QR codes cannot be forged.
+
+### Overview
+
+When a ticket is issued, a secure token is generated that:
+- Contains an HMAC-SHA256 signature for integrity verification
+- Is stored in the database with expiration tracking
+- Can be revoked when the ticket is paid or dismissed
+- Is automatically cleaned up after 30 days of being expired/revoked
+
+### Security Features
+
+| Feature | Description |
+|---------|-------------|
+| **HMAC Signature** | Each token includes a cryptographic signature using SHA-256 |
+| **No Raw IDs in URLs** | Ticket IDs are never exposed in QR code URLs |
+| **Token Revocation** | Tokens are automatically revoked when tickets are paid/dismissed |
+| **Expiration** | Tokens expire after 1 year by default |
+| **Automatic Cleanup** | Daily cron job deletes old expired/revoked tokens |
+
+### Token Schema
+
+```javascript
+{
+  _id: ObjectId("..."),
+  token: "Njk0YTM4MDM4OWUy...",       // Base64URL encoded token
+  ticketId: ObjectId("..."),          // Reference to ticket
+  status: "active",                    // active, expired, revoked
+  expiresAt: ISODate("2025-12-25"),
+  usedAt: ISODate("..."),             // Last scan time
+  usedByIp: "192.168.1.1",            // Last scanner IP
+  usedByUserAgent: "Mozilla/5.0...",
+  revokedAt: ISODate("..."),
+  createdAt: ISODate("..."),
+  updatedAt: ISODate("...")
+}
+```
+
+### Token Lifecycle
+
+```
+┌─────────────────┐
+│   Token Created │◄──── When ticket is issued
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     ACTIVE      │◄──── Can be scanned multiple times
+└────────┬────────┘
+         │
+         ├───────────────────────────────┐
+         ▼                               ▼
+┌─────────────────┐            ┌─────────────────┐
+│    REVOKED      │            │    EXPIRED      │
+│  (ticket paid)  │            │ (after 1 year)  │
+└────────┬────────┘            └────────┬────────┘
+         │                              │
+         └──────────────┬───────────────┘
+                        ▼
+              ┌─────────────────┐
+              │    DELETED      │◄──── After 30 days (cleanup job)
+              └─────────────────┘
+```
+
+### Automatic Cleanup
+
+A scheduled cron job runs daily at 3:00 AM to clean up old tokens:
+
+- **Retention Period**: 30 days after expiration/revocation
+- **Schedule**: Every day at 3:00 AM (`EVERY_DAY_AT_3AM`)
+- **Manual Trigger**: `POST /ticket-tokens/cleanup`
+
+### Integration with Tickets
+
+Tokens are automatically managed:
+
+1. **On Ticket Creation**: Token is generated via `tickets.service.getQrCode()`
+2. **On Ticket Payment**: Token is revoked via `tickets.service.pay()`
+3. **On Ticket Dismissal**: Token is revoked via `tickets.service.dismiss()`
+
+### QR Code Flow
+
+```
+1. Agent issues ticket
+   └─► Token generated with HMAC signature
+   └─► QR code contains: /api/v1/ticket-tokens/verify/{token}
+
+2. User scans QR code
+   └─► Browser hits verify endpoint
+   └─► API validates signature + checks database
+   └─► Redirects to: /tickets/t/{token} (not raw ticketId!)
+
+3. Flutter app receives token
+   └─► Calls /api/v1/ticket-tokens/verify/{token}/json
+   └─► Gets ticketId from response
+   └─► Fetches ticket details
 ```
 
 ---
