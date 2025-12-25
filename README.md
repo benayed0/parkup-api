@@ -4,7 +4,7 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-A smart parking management system API built with [NestJS](https://nestjs.com/) and MongoDB. ParkUp provides a comprehensive backend for parking zone management, real-time session tracking, ticket issuance, and payment processing.
+A smart parking management system API built with [NestJS](https://nestjs.com/) and MongoDB. ParkUp provides a comprehensive backend for parking zone management, real-time session tracking, ticket management, and payment processing.
 
 ## Table of Contents
 
@@ -83,6 +83,8 @@ Create a `.env` file with the following variables:
 
 ```env
 # Database
+# Development: Use localhost
+# Production: Use MongoDB Atlas or your cloud provider
 MONGODB_URI=mongodb://localhost:27017/parkup
 
 # JWT
@@ -337,7 +339,16 @@ db.payments.createIndex({ status: 1 })
 db.payments.createIndex({ userId: 1, createdAt: -1 })
 ```
 
-For complete schema details including all collections (Parking Meters, Payment Methods, OTP Codes, Refresh Tokens), see the inline documentation above.
+### Additional Collections
+
+For a complete database implementation, you'll also need:
+
+- **Parking Meters Collection**: Stores individual parking meters with location and zone references
+- **Payment Methods Collection**: User's saved payment methods (cards, wallet)
+- **OTP Codes Collection**: Temporary OTP storage with TTL index (15-minute expiration)
+- **Refresh Tokens Collection**: JWT refresh tokens with TTL index (30-day expiration)
+
+See the BACKEND_GUIDE or refer to Mongoose schema files in the codebase for detailed field definitions.
 
 ---
 
@@ -821,8 +832,6 @@ Top up wallet balance.
 }
 ```
 
-For complete API documentation including all endpoints, see the sections above.
-
 ---
 
 ## Agents Module
@@ -1085,8 +1094,8 @@ This project is [MIT licensed](LICENSE).
 ### Reporting Issues
 
 If you encounter a bug or have a feature request:
-1. Check [existing issues](https://github.com/benayed0/parkup-api/issues) to avoid duplicates
-2. Create a [new issue](https://github.com/benayed0/parkup-api/issues/new) with:
+1. Check [existing issues](../../issues) to avoid duplicates
+2. Create a [new issue](../../issues/new) with:
    - Clear description of the problem or feature
    - Steps to reproduce (for bugs)
    - Expected vs actual behavior
