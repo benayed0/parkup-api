@@ -72,7 +72,6 @@ export class AgentsService {
       .select('+password')
       .populate('assignedZones')
       .exec();
-    console.log(loginDto);
 
     if (!agent) {
       throw new UnauthorizedException('Invalid credentials');

@@ -221,25 +221,12 @@ export class TicketsController {
   }
 
   /**
-   * Get ticket by ticket number
+   * Get ticket by ticket number (6-char code for manual entry)
    * GET /tickets/number/:ticketNumber
    */
   @Get('number/:ticketNumber')
   async findByTicketNumber(@Param('ticketNumber') ticketNumber: string) {
     const ticket = await this.ticketsService.findByTicketNumber(ticketNumber);
-    return {
-      success: true,
-      data: ticket,
-    };
-  }
-
-  /**
-   * Get ticket by unique code (for manual entry when QR is damaged)
-   * GET /tickets/code/:code
-   */
-  @Get('code/:code')
-  async findByUniqueCode(@Param('code') code: string) {
-    const ticket = await this.ticketsService.findByUniqueCode(code);
     return {
       success: true,
       data: ticket,

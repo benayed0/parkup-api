@@ -11,7 +11,6 @@ export class Agent {
   @Prop({
     required: true,
     unique: true,
-    lowercase: true,
     index: true,
   })
   username: string;

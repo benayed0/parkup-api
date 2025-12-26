@@ -47,39 +47,16 @@ export class TicketsService {
 
   /**
    * Generate a unique ticket number
-   * Format: TKT-YYYYMMDD-XXXXX (e.g., TKT-20241217-00001)
+   * Format: 6 alphanumeric characters (e.g., A7K3M2)
+   * Uses safe character set excluding confusing chars (0/O, 1/I/L)
    */
-  private async generateTicketNumber(): Promise<string> {
-    const today = new Date();
-    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-    const prefix = `TKT-${dateStr}-`;
-
-    // Find the last ticket number for today
-    const lastTicket = await this.ticketModel
-      .findOne({ ticketNumber: { $regex: `^${prefix}` } })
-      .sort({ ticketNumber: -1 })
-      .exec();
-
-    let sequence = 1;
-    if (lastTicket) {
-      const lastSequence = parseInt(lastTicket.ticketNumber.split('-')[2], 10);
-      sequence = lastSequence + 1;
-    }
-
-    return `${prefix}${sequence.toString().padStart(5, '0')}`;
-  }
-
-  /**
-   * Generate a unique code with collision detection
-   * Retries up to maxRetries times if a collision is detected
-   */
-  private async generateUniqueCodeWithRetry(maxRetries = 5): Promise<string> {
+  private async generateTicketNumber(maxRetries = 5): Promise<string> {
     for (let i = 0; i < maxRetries; i++) {
       const code = generateUniqueCode();
-      const exists = await this.ticketModel.exists({ uniqueCode: code });
+      const exists = await this.ticketModel.exists({ ticketNumber: code });
       if (!exists) return code;
     }
-    throw new Error('Failed to generate unique code after maximum retries');
+    throw new Error('Failed to generate unique ticket number after maximum retries');
   }
 
   /**
@@ -87,7 +64,6 @@ export class TicketsService {
    */
   async create(createDto: CreateTicketDto): Promise<TicketDocument> {
     const ticketNumber = await this.generateTicketNumber();
-    const uniqueCode = await this.generateUniqueCodeWithRetry();
 
     // Resolve license plate from structured or string format
     const plate = createDto.plate
@@ -101,7 +77,6 @@ export class TicketsService {
     const ticket = new this.ticketModel({
       ...createDto,
       ticketNumber,
-      uniqueCode,
       position: {
         type: 'Point',
         coordinates: createDto.position.coordinates,
@@ -284,7 +259,7 @@ export class TicketsService {
   }
 
   /**
-   * Find a ticket by ticket number
+   * Find a ticket by ticket number (6-char code for manual entry)
    */
   async findByTicketNumber(ticketNumber: string): Promise<TicketDocument> {
     const ticket = await this.ticketModel
@@ -295,22 +270,6 @@ export class TicketsService {
 
     if (!ticket) {
       throw new NotFoundException(`Ticket ${ticketNumber} not found`);
-    }
-    return ticket;
-  }
-
-  /**
-   * Find a ticket by unique code (for manual entry when QR is damaged)
-   */
-  async findByUniqueCode(code: string): Promise<TicketDocument> {
-    const ticket = await this.ticketModel
-      .findOne({ uniqueCode: code.toUpperCase() })
-      .populate('parkingSessionId')
-      .populate('agentId')
-      .exec();
-
-    if (!ticket) {
-      throw new NotFoundException(`Ticket with code ${code} not found`);
     }
     return ticket;
   }

@@ -32,16 +32,8 @@ export class GeoJsonPoint {
 
 @Schema({ timestamps: true })
 export class Ticket {
-  @Prop({
-    required: true,
-    unique: true,
-    uppercase: true,
-    index: true,
-  })
-  ticketNumber: string;
-
   /**
-   * Short human-readable unique code for manual entry when QR code is damaged
+   * Short human-readable unique ticket number for manual entry
    * Format: 6 alphanumeric characters (e.g., A7K3M2)
    */
   @Prop({
@@ -50,7 +42,7 @@ export class Ticket {
     uppercase: true,
     index: true,
   })
-  uniqueCode: string;
+  ticketNumber: string;
 
   @Prop({
     type: {
