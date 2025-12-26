@@ -24,6 +24,7 @@ import {
   parseLicensePlateString,
 } from '../shared/license-plate';
 import { TicketTokensService } from '../ticket-tokens/ticket-tokens.service';
+import { generateUniqueCode } from './utils/generate-unique-code';
 
 export interface TicketWithQrCode {
   ticket: TicketDocument;
@@ -69,10 +70,24 @@ export class TicketsService {
   }
 
   /**
+   * Generate a unique code with collision detection
+   * Retries up to maxRetries times if a collision is detected
+   */
+  private async generateUniqueCodeWithRetry(maxRetries = 5): Promise<string> {
+    for (let i = 0; i < maxRetries; i++) {
+      const code = generateUniqueCode();
+      const exists = await this.ticketModel.exists({ uniqueCode: code });
+      if (!exists) return code;
+    }
+    throw new Error('Failed to generate unique code after maximum retries');
+  }
+
+  /**
    * Create a new ticket
    */
   async create(createDto: CreateTicketDto): Promise<TicketDocument> {
     const ticketNumber = await this.generateTicketNumber();
+    const uniqueCode = await this.generateUniqueCodeWithRetry();
 
     // Resolve license plate from structured or string format
     const plate = createDto.plate
@@ -86,6 +101,7 @@ export class TicketsService {
     const ticket = new this.ticketModel({
       ...createDto,
       ticketNumber,
+      uniqueCode,
       position: {
         type: 'Point',
         coordinates: createDto.position.coordinates,
@@ -279,6 +295,22 @@ export class TicketsService {
 
     if (!ticket) {
       throw new NotFoundException(`Ticket ${ticketNumber} not found`);
+    }
+    return ticket;
+  }
+
+  /**
+   * Find a ticket by unique code (for manual entry when QR is damaged)
+   */
+  async findByUniqueCode(code: string): Promise<TicketDocument> {
+    const ticket = await this.ticketModel
+      .findOne({ uniqueCode: code.toUpperCase() })
+      .populate('parkingSessionId')
+      .populate('agentId')
+      .exec();
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with code ${code} not found`);
     }
     return ticket;
   }

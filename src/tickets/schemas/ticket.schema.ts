@@ -40,6 +40,18 @@ export class Ticket {
   })
   ticketNumber: string;
 
+  /**
+   * Short human-readable unique code for manual entry when QR code is damaged
+   * Format: 6 alphanumeric characters (e.g., A7K3M2)
+   */
+  @Prop({
+    required: true,
+    unique: true,
+    uppercase: true,
+    index: true,
+  })
+  uniqueCode: string;
+
   @Prop({
     type: {
       type: String,

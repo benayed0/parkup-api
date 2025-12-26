@@ -68,10 +68,11 @@ export class AgentsService {
     loginDto: LoginAgentDto,
   ): Promise<{ agent: AgentDocument; token: string }> {
     const agent = await this.agentModel
-      .findOne({ username: loginDto.username.toLowerCase() })
+      .findOne({ username: loginDto.username })
       .select('+password')
       .populate('assignedZones')
       .exec();
+    console.log(loginDto);
 
     if (!agent) {
       throw new UnauthorizedException('Invalid credentials');

@@ -234,6 +234,19 @@ export class TicketsController {
   }
 
   /**
+   * Get ticket by unique code (for manual entry when QR is damaged)
+   * GET /tickets/code/:code
+   */
+  @Get('code/:code')
+  async findByUniqueCode(@Param('code') code: string) {
+    const ticket = await this.ticketsService.findByUniqueCode(code);
+    return {
+      success: true,
+      data: ticket,
+    };
+  }
+
+  /**
    * Get QR code for a ticket (as JSON with data URL)
    * GET /tickets/:id/qr
    */
