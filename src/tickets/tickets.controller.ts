@@ -11,9 +11,19 @@ import {
   HttpCode,
   HttpStatus,
   Res,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Response, Request } from 'express';
+import { ConfigService } from '@nestjs/config';
 import { TicketsService } from './tickets.service';
+import { TicketTokensService } from '../ticket-tokens/ticket-tokens.service';
+import { CombinedJwtAuthGuard } from '../shared/auth/combined-jwt-auth.guard';
+import { ZoneAccessGuard } from '../shared/auth/zone-access.guard';
+import { OperatorJwtAuthGuard } from '../operators/guards/operator-jwt-auth.guard';
+import { RolesGuard } from '../operators/guards/roles.guard';
+import { Roles } from '../operators/decorators/roles.decorator';
+import { OperatorRole } from '../operators/schemas/operator.schema';
 import {
   CreateTicketDto,
   UpdateTicketDto,
@@ -24,7 +34,17 @@ import { TicketStatus, TicketReason } from './schemas/ticket.schema';
 
 @Controller('tickets')
 export class TicketsController {
-  constructor(private readonly ticketsService: TicketsService) {}
+  private readonly clientBaseUrl: string;
+
+  constructor(
+    private readonly ticketsService: TicketsService,
+    private readonly ticketTokensService: TicketTokensService,
+    private readonly configService: ConfigService,
+  ) {
+    this.clientBaseUrl =
+      this.configService.get<string>('CLIENT_BASE_URL') ||
+      'http://localhost:64372';
+  }
 
   /**
    * Create a new ticket
@@ -347,6 +367,189 @@ export class TicketsController {
       success: true,
       message: `Updated ${count} overdue tickets`,
       count,
+    };
+  }
+
+  // ========================
+  // TOKEN ENDPOINTS (merged from ticket-tokens)
+  // ========================
+
+  /**
+   * Generate a secure token and QR code for a ticket
+   * POST /tickets/:id/token
+   * Auth: Operator OR Agent with zone access
+   */
+  @Post(':id/token')
+  @UseGuards(CombinedJwtAuthGuard, ZoneAccessGuard)
+  async generateToken(
+    @Param('id') id: string,
+    @Body() body: { expirationDays?: number },
+  ) {
+    const result = await this.ticketTokensService.generateTokenForTicket(
+      id,
+      body.expirationDays,
+    );
+
+    return {
+      success: true,
+      data: {
+        token: result.token,
+        qrCodeDataUrl: result.qrCodeDataUrl,
+        qrCodeContent: result.qrCodeContent,
+        expiresAt: result.expiresAt,
+      },
+    };
+  }
+
+  /**
+   * Verify a token and redirect to client with ticket info
+   * GET /tickets/token/verify/:token
+   * PUBLIC - for QR code scanning
+   */
+  @Get('token/verify/:token')
+  async verifyToken(
+    @Param('token') token: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const clientIp =
+      req.headers['x-forwarded-for']?.toString() ||
+      req.socket.remoteAddress ||
+      'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    const result = await this.ticketTokensService.verifyToken(
+      token,
+      clientIp,
+      userAgent,
+    );
+
+    if (!result.valid) {
+      const errorUrl = `${this.clientBaseUrl}/tickets/error?code=${result.errorCode}&message=${encodeURIComponent(result.error || 'Unknown error')}`;
+      return res.redirect(HttpStatus.FOUND, errorUrl);
+    }
+
+    const successUrl = `${this.clientBaseUrl}/tickets/t/${token}`;
+    return res.redirect(HttpStatus.FOUND, successUrl);
+  }
+
+  /**
+   * Verify a token and return JSON response
+   * GET /tickets/token/verify/:token/json
+   * PUBLIC - for API clients
+   */
+  @Get('token/verify/:token/json')
+  async verifyTokenJson(@Param('token') token: string, @Req() req: Request) {
+    const clientIp =
+      req.headers['x-forwarded-for']?.toString() ||
+      req.socket.remoteAddress ||
+      'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+
+    const result = await this.ticketTokensService.verifyToken(
+      token,
+      clientIp,
+      userAgent,
+    );
+
+    if (!result.valid) {
+      return {
+        success: false,
+        error: result.error,
+        errorCode: result.errorCode,
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        ticketId: result.ticketId,
+      },
+    };
+  }
+
+  /**
+   * Regenerate QR code for an existing ticket token
+   * POST /tickets/:id/token/regenerate-qr
+   * Auth: Operator OR Agent with zone access
+   */
+  @Post(':id/token/regenerate-qr')
+  @UseGuards(CombinedJwtAuthGuard, ZoneAccessGuard)
+  async regenerateQrCode(
+    @Param('id') id: string,
+    @Body() body: { size?: number },
+  ) {
+    const result = await this.ticketTokensService.regenerateQrCode(
+      id,
+      body.size,
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  /**
+   * Get token info for a ticket
+   * GET /tickets/:id/token
+   * Auth: Operator OR Agent with zone access
+   */
+  @Get(':id/token')
+  @UseGuards(CombinedJwtAuthGuard, ZoneAccessGuard)
+  async getTokenForTicket(@Param('id') id: string) {
+    const token = await this.ticketTokensService.getTokenForTicket(id);
+
+    if (!token) {
+      return {
+        success: false,
+        error: 'No active token found for this ticket',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        token: token.token,
+        status: token.status,
+        expiresAt: token.expiresAt,
+        createdAt: token.createdAt,
+        usedAt: token.usedAt,
+      },
+    };
+  }
+
+  /**
+   * Revoke token for a ticket
+   * POST /tickets/:id/token/revoke
+   * Auth: Operator OR Agent with zone access
+   */
+  @Post(':id/token/revoke')
+  @UseGuards(CombinedJwtAuthGuard, ZoneAccessGuard)
+  async revokeToken(@Param('id') id: string) {
+    await this.ticketTokensService.revokeToken(id);
+
+    return {
+      success: true,
+      message: 'Token revoked successfully',
+    };
+  }
+
+  /**
+   * Cleanup old tokens (admin only)
+   * POST /tickets/tokens/cleanup
+   * Auth: Operator (super_admin only)
+   */
+  @Post('tokens/cleanup')
+  @UseGuards(OperatorJwtAuthGuard, RolesGuard)
+  @Roles(OperatorRole.SUPER_ADMIN)
+  async cleanupTokens() {
+    const result = await this.ticketTokensService.manualCleanup();
+
+    return {
+      success: true,
+      message: `Cleanup completed: ${result.deletedCount} tokens deleted`,
+      deletedCount: result.deletedCount,
     };
   }
 }

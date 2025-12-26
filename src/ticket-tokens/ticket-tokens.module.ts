@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
-import { TicketTokensController } from './ticket-tokens.controller';
 import { TicketTokensService } from './ticket-tokens.service';
 import { TicketToken, TicketTokenSchema } from './schemas/ticket-token.schema';
 
@@ -12,7 +11,7 @@ import { TicketToken, TicketTokenSchema } from './schemas/ticket-token.schema';
       { name: TicketToken.name, schema: TicketTokenSchema },
     ]),
   ],
-  controllers: [TicketTokensController],
+  controllers: [],
   providers: [TicketTokensService],
   exports: [TicketTokensService],
 })
