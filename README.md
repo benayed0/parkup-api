@@ -14,20 +14,29 @@ A smart parking management system API built with [NestJS](https://nestjs.com/) a
 4. [Authentication](#authentication)
 5. [Database Schema](#database-schema)
 6. [API Endpoints](#api-endpoints)
+   - [Root Endpoint](#root-endpoint)
    - [Auth Endpoints](#auth-endpoints)
+   - [User Endpoints](#user-endpoints)
    - [Vehicle Endpoints](#vehicle-endpoints)
-   - [Parking Endpoints](#parking-endpoints)
+   - [Parking Zone Endpoints](#parking-zone-endpoints)
+   - [Parking Session Endpoints](#parking-session-endpoints)
    - [Ticket Endpoints](#ticket-endpoints)
-   - [Ticket Token Endpoints](#ticket-token-endpoints)
-   - [Payment Endpoints](#payment-endpoints)
+   - [Agent Endpoints](#agent-endpoints)
+   - [Operator Endpoints](#operator-endpoints)
+   - [Street Endpoints](#street-endpoints)
+   - [QR Code Endpoints](#qr-code-endpoints)
+   - [Wallet Endpoints](#wallet-endpoints)
+   - [Wallet Admin Endpoints](#wallet-admin-endpoints)
 7. [Agents Module](#agents-module)
-8. [Tickets Module](#tickets-module)
-9. [Ticket Tokens Module](#ticket-tokens-module)
-10. [Error Handling](#error-handling)
-11. [Implementation Checklist](#implementation-checklist)
-12. [Tech Stack](#tech-stack)
-13. [Security](#security)
-14. [License](#license)
+8. [Operators Module](#operators-module)
+9. [Streets Module](#streets-module)
+10. [Tickets Module](#tickets-module)
+11. [Ticket Tokens Module](#ticket-tokens-module)
+12. [Error Handling](#error-handling)
+13. [Implementation Checklist](#implementation-checklist)
+14. [Tech Stack](#tech-stack)
+15. [Security](#security)
+16. [License](#license)
 
 ---
 
@@ -366,7 +375,7 @@ See the BACKEND_GUIDE or refer to Mongoose schema files in the codebase for deta
 ### Base URL
 
 ```
-https://api.parkup.tn/v1
+https://api.parkup.tn/api/v1
 ```
 
 ### Standard Headers
@@ -375,6 +384,21 @@ https://api.parkup.tn/v1
 Authorization: Bearer <access_token>
 Content-Type: application/json
 Accept: application/json
+```
+
+---
+
+### Root Endpoint
+
+#### GET /
+
+Get API welcome message.
+
+**Response (200):**
+```json
+{
+  "message": "Hello from ParkUp API!"
+}
 ```
 
 ---
@@ -512,31 +536,159 @@ Get current user profile.
 
 ---
 
-### Vehicle Endpoints
+#### PATCH /auth/profile
 
-#### POST /users/me/vehicles
+Update user profile.
 
-Add a vehicle to user profile.
+**Headers:** Authorization required
 
 **Request:**
 ```json
 {
-  "license_plate": "123 TUN 4567",
-  "nickname": "Ma voiture",
-  "is_default": true
+  "phone": "+216 12 345 678"
 }
 ```
 
 **Response (200):**
 ```json
 {
-  "user": { ... }
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "phone": "+216 12 345 678",
+    "is_email_verified": true,
+    "vehicles": [...],
+    "wallet_balance": 25.0,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  }
 }
 ```
 
 ---
 
-#### PATCH /users/me/vehicles/{license_plate}
+### User Endpoints
+
+#### POST /users
+
+Create a new user.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "phone": "+216 12 345 678"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "phone": "+216 12 345 678",
+    "vehicles": [],
+    "isEmailVerified": false
+  }
+}
+```
+
+---
+
+#### GET /users
+
+Get all users with optional pagination.
+
+**Query params:**
+- `limit` (optional): Number of results per page
+- `skip` (optional): Number of results to skip
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 50
+}
+```
+
+---
+
+#### GET /users/:id
+
+Get a user by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "vehicles": [...]
+  }
+}
+```
+
+---
+
+#### PATCH /users/:id
+
+Update a user.
+
+**Request:**
+```json
+{
+  "phone": "+216 98 765 432"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /users/:id
+
+Delete a user.
+
+**Response (204):** No content
+
+---
+
+### Vehicle Endpoints
+
+#### POST /users/:id/vehicles
+
+Add a vehicle to user profile.
+
+**Request:**
+```json
+{
+  "licensePlate": "123 TUN 4567",
+  "nickname": "Ma voiture",
+  "isDefault": true
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /users/:id/vehicles/:licensePlate
 
 Update a vehicle.
 
@@ -544,153 +696,430 @@ Update a vehicle.
 ```json
 {
   "nickname": "Nouveau nom",
-  "is_default": true
+  "isDefault": true
 }
 ```
 
 **Response (200):**
 ```json
 {
-  "user": { ... }
+  "success": true,
+  "data": { ... }
 }
 ```
 
 ---
 
-#### DELETE /users/me/vehicles/{license_plate}
+#### DELETE /users/:id/vehicles/:licensePlate
 
 Remove a vehicle.
 
 **Response (200):**
 ```json
 {
-  "user": { ... }
+  "success": true,
+  "data": { ... }
 }
 ```
 
 ---
 
-### Parking Endpoints
+### Parking Zone Endpoints
+
+### Parking Zone Endpoints
+
+#### POST /zones
+
+Create a new parking zone.
+
+**Request:**
+```json
+{
+  "code": "SBS-001",
+  "name": "Sidi Bou Said Centre",
+  "description": "Zone centre-ville",
+  "address": "Avenue Habib Bourguiba",
+  "hourlyRate": 1.5,
+  "dailyRate": 10.0,
+  "maxDurationMinutes": 480,
+  "location": {
+    "type": "Point",
+    "coordinates": [10.3489, 36.8689]
+  }
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
 
 #### GET /zones
 
 Get all active parking zones.
 
+**Query params:**
+- `isActive` (optional): Filter by active status (true/false)
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
+
 **Response (200):**
 ```json
 {
-  "zones": [
+  "success": true,
+  "data": [
     {
       "id": "uuid",
       "code": "SBS-001",
       "name": "Sidi Bou Said Centre",
-      "hourly_rate": 1.5,
-      "latitude": 36.8689,
-      "longitude": 10.3489
+      "hourlyRate": 1.5,
+      "location": {
+        "type": "Point",
+        "coordinates": [10.3489, 36.8689]
+      }
     }
-  ]
+  ],
+  "count": 1
 }
 ```
 
 ---
 
-#### GET /meters
+#### GET /zones/admin
 
-Get parking meters with geolocation filtering.
+Get zones filtered by operator's assigned zones (authenticated operators only).
 
-**Query params:**
-- `latitude` (optional): Center latitude
-- `longitude` (optional): Center longitude
-- `radius` (optional): Search radius in meters (default 5000)
+**Headers:** Authorization required (Operator token)
+
+**Query params:** Same as GET /zones
 
 **Response (200):**
 ```json
 {
-  "meters": [
-    {
-      "id": "uuid",
-      "zone_code": "SBS-001",
-      "zone_name": "Sidi Bou Said Centre",
-      "latitude": 36.8689,
-      "longitude": 10.3489,
-      "hourly_rate": 1.5,
-      "available_spots": 15,
-      "distance_meters": 250.5
-    }
-  ]
+  "success": true,
+  "data": [...],
+  "count": 5
 }
 ```
 
 ---
 
-#### POST /parking/sessions
+#### GET /zones/code/:code
 
-Start a parking session.
+Get zone by code.
 
-**Headers:** Authorization required
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### GET /zones/:id
+
+Get zone by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PUT /zones/:id
+
+Update a parking zone.
 
 **Request:**
 ```json
 {
-  "license_plate": "123 TUN 4567",
-  "zone_id": "uuid",
-  "duration_minutes": 120,
+  "name": "Updated Name",
+  "hourlyRate": 2.0
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /zones/:id
+
+Delete a parking zone.
+
+**Response (204):** No content
+
+---
+
+### Parking Session Endpoints
+
+### Parking Session Endpoints
+
+#### POST /parking-sessions
+
+Start a parking session.
+
+**Request:**
+```json
+{
+  "userId": "uuid",
+  "zoneId": "uuid",
+  "licensePlate": "123 TUN 4567",
+  "zoneName": "Sidi Bou Said Centre",
+  "durationMinutes": 120,
   "amount": 3.0
 }
 ```
 
-**Response (201):**
+**Response (200):**
 ```json
 {
-  "session": {
+  "success": true,
+  "data": {
     "id": "uuid",
-    "start_time": "2024-01-01T10:00:00Z",
-    "end_time": "2024-01-01T12:00:00Z",
+    "startTime": "2024-01-01T10:00:00Z",
+    "endTime": "2024-01-01T12:00:00Z",
     "status": "active",
-    "ticket_id": "uuid"
-  },
-  "ticket": {
-    "id": "uuid",
-    "qr_code": "PKP-ABC123XYZ"
+    "amount": 3.0
   }
 }
 ```
 
 ---
 
-#### GET /parking/sessions/active
+#### GET /parking-sessions
 
-Get current active session for user.
+Get all sessions with optional filters.
 
-**Headers:** Authorization required
+**Query params:**
+- `userId` (optional): Filter by user ID
+- `status` (optional): Filter by status (active, completed, expired, cancelled)
+- `licensePlate` (optional): Filter by license plate
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
 
 **Response (200):**
 ```json
 {
-  "session": { ... } // or null
+  "success": true,
+  "data": [...],
+  "count": 10
 }
 ```
 
 ---
 
-#### POST /parking/sessions/{session_id}/extend
+#### GET /parking-sessions/user/:userId/active
 
-Extend parking duration.
+Get user's active session.
 
-**Headers:** Authorization required
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### GET /parking-sessions/user/:userId/history
+
+Get user's parking history.
+
+**Query params:**
+- `limit` (optional): Number of results (default 20)
+- `skip` (optional): Pagination offset (default 0)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 20
+}
+```
+
+---
+
+#### GET /parking-sessions/user/:userId
+
+Get all sessions for a user.
+
+**Query params:**
+- `status` (optional): Filter by status
+- `limit` (optional): Number of results
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 15
+}
+```
+
+---
+
+#### POST /parking-sessions/check-vehicle
+
+Check vehicle by license plate (structured request).
 
 **Request:**
 ```json
 {
-  "additional_minutes": 60,
-  "additional_amount": 1.5
+  "plate": "123 TUN 4567",
+  "zoneId": "uuid"
 }
 ```
 
 **Response (200):**
 ```json
 {
-  "session": { ... }
+  "success": true,
+  "data": [...],
+  "count": 1
+}
+```
+
+---
+
+#### GET /parking-sessions/plate/:licensePlate/active
+
+Get active sessions by license plate (legacy).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 1
+}
+```
+
+---
+
+#### GET /parking-sessions/:id
+
+Get a single session by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PUT /parking-sessions/:id
+
+Update a parking session.
+
+**Request:**
+```json
+{
+  "status": "completed"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /parking-sessions/:id/extend
+
+#### PATCH /parking-sessions/:id/extend
+
+Extend parking duration.
+
+**Request:**
+```json
+{
+  "additionalMinutes": 60,
+  "additionalAmount": 1.5
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /parking-sessions/:id/end
+
+End a parking session.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /parking-sessions/:id/cancel
+
+Cancel a parking session.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /parking-sessions/:id
+
+Delete a parking session.
+
+**Response (204):** No content
+
+---
+
+#### POST /parking-sessions/admin/update-expired
+
+Update expired sessions (admin/cron endpoint).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Updated 5 expired sessions",
+  "count": 5
 }
 ```
 
@@ -698,62 +1127,375 @@ Extend parking duration.
 
 ### Ticket Endpoints
 
-#### GET /tickets
+### Ticket Endpoints
 
-Get user's parking tickets (for display).
+#### POST /tickets
 
-**Headers:** Authorization required
-
-**Query params:**
-- `status` (optional): active, expired, verified
-
-**Response (200):**
-```json
-{
-  "tickets": [
-    {
-      "id": "uuid",
-      "license_plate": "123 TUN 4567",
-      "zone_name": "Sidi Bou Said Centre",
-      "start_time": "2024-01-01T10:00:00Z",
-      "end_time": "2024-01-01T12:00:00Z",
-      "qr_code": "PKP-ABC123XYZ",
-      "status": "active"
-    }
-  ]
-}
-```
-
----
-
-#### GET /tickets/verify/{qr_code}
-
-Verify ticket by QR code (for parking agents).
-
-**Response (200):**
-```json
-{
-  "is_valid": true,
-  "message": "Ticket valide jusqu'à 12:00",
-  "ticket": { ... },
-  "verified_at": "2024-01-01T11:30:00Z"
-}
-```
-
----
-
-### Ticket Token Endpoints
-
-Secure token-based QR codes for fine tickets. Tokens use HMAC-SHA256 signatures to prevent forgery and URL guessing attacks.
-
-#### POST /ticket-tokens/generate
-
-Generate a secure token and QR code for a ticket.
+Create a new ticket.
 
 **Request:**
 ```json
 {
-  "ticketId": "64abc123...",
+  "agentId": "uuid",
+  "licensePlate": "123 TUN 4567",
+  "reason": "car_sabot",
+  "fineAmount": 50,
+  "issuedAt": "2024-01-01T10:30:00Z",
+  "dueDate": "2024-12-31T23:59:59Z",
+  "notes": "Vehicle wheel-clamped"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### POST /tickets/with-qr
+
+Create a new ticket with QR code for printing.
+
+**Request:** Same as POST /tickets
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "ticket": { ... },
+    "qrCode": {
+      "token": "Njk0YTM4...",
+      "qrCodeDataUrl": "data:image/png;base64,...",
+      "qrCodeContent": "https://api.parkup.tn/api/v1/tickets/token/verify/Njk0YTM4..."
+    }
+  }
+}
+```
+
+---
+
+#### GET /tickets
+
+Get all tickets with optional filters.
+
+**Query params:**
+- `userId` (optional): Filter by user ID
+- `agentId` (optional): Filter by agent ID
+- `status` (optional): Filter by status (pending, paid, appealed, dismissed, overdue)
+- `licensePlate` (optional): Filter by complete license plate
+- `plateLeft` (optional): Filter by left part of license plate
+- `plateRight` (optional): Filter by right part of license plate
+- `plateType` (optional): Filter by plate type
+- `reason` (optional): Filter by reason (car_sabot, pound)
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 10
+}
+```
+
+---
+
+#### GET /tickets/check/:licensePlate
+
+Check if a license plate has unpaid tickets.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "hasUnpaidTickets": true,
+    "tickets": [...],
+    "count": 2
+  }
+}
+```
+
+---
+
+#### GET /tickets/user/:userId
+
+Get user's tickets.
+
+**Query params:**
+- `status` (optional): Filter by status
+- `limit` (optional): Number of results
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 5
+}
+```
+
+---
+
+#### GET /tickets/user/:userId/stats
+
+Get user's ticket statistics.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "totalTickets": 10,
+    "pending": 2,
+    "paid": 7,
+    "appealed": 1,
+    "totalFines": 500
+  }
+}
+```
+
+---
+
+#### GET /tickets/agent/:agentId
+
+Get tickets issued by an agent.
+
+**Query params:**
+- `status` (optional): Filter by status
+- `limit` (optional): Number of results
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 15
+}
+```
+
+---
+
+#### GET /tickets/plate/:licensePlate
+
+Get tickets by license plate.
+
+**Query params:**
+- `status` (optional): Filter by status
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 3
+}
+```
+
+---
+
+#### GET /tickets/session/:sessionId
+
+Get tickets for a parking session.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 1
+}
+```
+
+---
+
+#### GET /tickets/number/:ticketNumber
+
+Get ticket by ticket number.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### GET /tickets/:id/qr
+
+Get QR code for a ticket (as JSON with data URL).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "Njk0YTM4...",
+    "qrCodeDataUrl": "data:image/png;base64,...",
+    "qrCodeContent": "https://api.parkup.tn/api/v1/tickets/token/verify/Njk0YTM4..."
+  }
+}
+```
+
+---
+
+#### GET /tickets/:id/qr/image
+
+Get QR code as PNG image (for printing).
+
+**Query params:**
+- `size` (optional): Image size in pixels (100-1000, default 300)
+
+**Response:** PNG image with `Content-Type: image/png`
+
+---
+
+#### GET /tickets/:id
+
+Get a single ticket by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PUT /tickets/:id
+
+Update a ticket.
+
+**Request:**
+```json
+{
+  "status": "paid",
+  "notes": "Updated notes"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /tickets/:id/pay
+
+Pay a ticket.
+
+**Request:**
+```json
+{
+  "paymentMethod": "wallet"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /tickets/:id/appeal
+
+Appeal a ticket.
+
+**Request:**
+```json
+{
+  "appealReason": "I had a valid parking session"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /tickets/:id/dismiss
+
+Dismiss a ticket (admin action).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /tickets/:id/sabot_removed
+
+Mark sabot as removed.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /tickets/:id
+
+Delete a ticket.
+
+**Response (204):** No content
+
+---
+
+#### POST /tickets/admin/update-overdue
+
+Update overdue tickets (admin/cron endpoint).
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Updated 3 overdue tickets",
+  "count": 3
+}
+```
+
+---
+
+#### POST /tickets/:id/token
+
+Generate a secure token and QR code for a ticket.
+
+**Headers:** Authorization required (Operator or Agent with zone access)
+
+**Request:**
+```json
+{
   "expirationDays": 365
 }
 ```
@@ -763,9 +1505,9 @@ Generate a secure token and QR code for a ticket.
 {
   "success": true,
   "data": {
-    "token": "Njk0YTM4MDM4OWUy...",
+    "token": "Njk0YTM4...",
     "qrCodeDataUrl": "data:image/png;base64,...",
-    "qrCodeContent": "https://api.parkup.tn/api/v1/ticket-tokens/verify/Njk0YTM4...",
+    "qrCodeContent": "https://api.parkup.tn/api/v1/tickets/token/verify/Njk0YTM4...",
     "expiresAt": "2025-12-25T00:00:00Z"
   }
 }
@@ -773,19 +1515,17 @@ Generate a secure token and QR code for a ticket.
 
 ---
 
-#### GET /ticket-tokens/verify/{token}
+#### GET /tickets/token/verify/:token
 
-Verify a token (browser redirect). Redirects to client app with ticket details or error.
+Verify a token and redirect to client (browser redirect).
 
-**Success Redirect:** `{CLIENT_BASE_URL}/tickets/t/{token}`
-
-**Error Redirect:** `{CLIENT_BASE_URL}/tickets/error?code={errorCode}&message={message}`
+**Response:** Redirects to client app
 
 ---
 
-#### GET /ticket-tokens/verify/{token}/json
+#### GET /tickets/token/verify/:token/json
 
-Verify a token and return JSON (for API clients/mobile apps).
+Verify a token and return JSON (for API clients).
 
 **Response (200) - Success:**
 ```json
@@ -806,30 +1546,57 @@ Verify a token and return JSON (for API clients/mobile apps).
 }
 ```
 
-**Error Codes:**
-| Code | Description |
-|------|-------------|
-| `INVALID_SIGNATURE` | Token signature verification failed (tampered/forged) |
-| `TOKEN_NOT_FOUND` | Token doesn't exist in database |
-| `TOKEN_REVOKED` | Token was revoked (ticket paid/dismissed) |
-| `TOKEN_EXPIRED` | Token has expired |
+---
+
+#### POST /tickets/:id/token/regenerate-qr
+
+Regenerate QR code for an existing ticket token.
+
+**Headers:** Authorization required
+
+**Request:**
+```json
+{
+  "size": 300
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
 
 ---
 
-#### GET /ticket-tokens/qr/{ticketId}/image
+#### GET /tickets/:id/token
 
-Get QR code as PNG image (for printing).
+Get token info for a ticket.
 
-**Query params:**
-- `size` (optional): Image size in pixels (100-1000, default 300)
+**Headers:** Authorization required
 
-**Response:** PNG image with `Content-Type: image/png`
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "token": "Njk0YTM4...",
+    "status": "active",
+    "expiresAt": "2025-12-25T00:00:00Z",
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
 
 ---
 
-#### POST /ticket-tokens/revoke/{ticketId}
+#### POST /tickets/:id/token/revoke
 
-Revoke all tokens for a ticket (called automatically when ticket is paid/dismissed).
+Revoke token for a ticket.
+
+**Headers:** Authorization required
 
 **Response (200):**
 ```json
@@ -841,9 +1608,11 @@ Revoke all tokens for a ticket (called automatically when ticket is paid/dismiss
 
 ---
 
-#### POST /ticket-tokens/cleanup
+#### POST /tickets/tokens/cleanup
 
-Manually trigger cleanup of old expired/revoked tokens (admin use).
+Cleanup old tokens (super admin only).
+
+**Headers:** Authorization required (Super Admin)
 
 **Response (200):**
 ```json
@@ -856,49 +1625,21 @@ Manually trigger cleanup of old expired/revoked tokens (admin use).
 
 ---
 
-### Payment Endpoints
+### Agent Endpoints
 
-#### GET /payments/methods
+#### POST /agents
 
-Get saved payment methods.
-
-**Headers:** Authorization required
-
-**Response (200):**
-```json
-{
-  "methods": [
-    {
-      "id": "uuid",
-      "type": "card",
-      "display_name": "Visa ****4242",
-      "is_default": true
-    },
-    {
-      "id": "wallet",
-      "type": "wallet",
-      "display_name": "Portefeuille ParkUp"
-    }
-  ]
-}
-```
-
----
-
-#### POST /payments
-
-Process a payment.
-
-**Headers:** Authorization required
+Create a new agent.
 
 **Request:**
 ```json
 {
-  "amount": 3.0,
-  "description": "Stationnement - Sidi Bou Said Centre",
-  "session_id": "uuid",
-  "payment_method_id": "uuid",
-  "method_type": "card"
+  "agentCode": "AGT-001",
+  "name": "John Smith",
+  "email": "john.smith@parkup.com",
+  "phone": "+1234567890",
+  "password": "securePassword123",
+  "assignedZones": ["zoneId1", "zoneId2"]
 }
 ```
 
@@ -906,28 +1647,749 @@ Process a payment.
 ```json
 {
   "success": true,
-  "payment": {
-    "id": "uuid",
-    "amount": 3.0,
-    "status": "completed",
-    "created_at": "2024-01-01T10:00:00Z"
+  "data": { ... }
+}
+```
+
+---
+
+#### POST /agents/login
+
+Agent login.
+
+**Request:**
+```json
+{
+  "email": "john.smith@parkup.com",
+  "password": "securePassword123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "agent": { ... }
   }
 }
 ```
 
 ---
 
-#### GET /wallet/balance
+#### GET /agents/me
 
-Get wallet balance.
+Get current agent from JWT token.
 
 **Headers:** Authorization required
 
 **Response (200):**
 ```json
 {
-  "balance": 25.0,
-  "currency": "TND"
+  "success": true,
+  "data": {
+    "agent": { ... }
+  }
+}
+```
+
+---
+
+#### GET /agents
+
+Get all agents with optional filters.
+
+**Query params:**
+- `isActive` (optional): Filter by active status (true/false)
+- `zoneId` (optional): Filter by assigned zone
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 10
+}
+```
+
+---
+
+#### GET /agents/zone/:zoneId
+
+Get agents by zone.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 5
+}
+```
+
+---
+
+#### GET /agents/:id
+
+Get a single agent by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PUT /agents/:id
+
+Update an agent.
+
+**Request:**
+```json
+{
+  "name": "Updated Name",
+  "phone": "+9876543210"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /agents/:id/change-password
+
+Change agent password.
+
+**Request:**
+```json
+{
+  "oldPassword": "currentPassword",
+  "newPassword": "newSecurePassword"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Password changed successfully"
+}
+```
+
+---
+
+#### PATCH /agents/:id/reset-password
+
+Reset agent password (admin action).
+
+**Request:**
+```json
+{
+  "newPassword": "resetPassword123"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Password reset successfully"
+}
+```
+
+---
+
+#### PATCH /agents/:id/activate
+
+Activate an agent.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /agents/:id/deactivate
+
+Deactivate an agent.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /agents/:id/zones
+
+Assign zones to an agent.
+
+**Request:**
+```json
+{
+  "zoneIds": ["zoneId1", "zoneId2", "zoneId3"]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /agents/:id
+
+Delete an agent.
+
+**Response (204):** No content
+
+---
+
+### Operator Endpoints
+
+#### POST /operators/auth/request-otp
+
+Request OTP for operator authentication.
+
+**Request:**
+```json
+{
+  "phoneNumber": "+216 12 345 678"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "OTP envoyé"
+}
+```
+
+---
+
+#### POST /operators/auth/verify-otp
+
+Verify OTP and authenticate operator.
+
+**Request:**
+```json
+{
+  "phoneNumber": "+216 12 345 678",
+  "otp": "123456"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOi...",
+    "operator": { ... }
+  }
+}
+```
+
+---
+
+#### GET /operators/me
+
+Get current operator profile.
+
+**Headers:** Authorization required (Operator token)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### POST /operators
+
+Create a new operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Request:**
+```json
+{
+  "name": "Operator Name",
+  "phoneNumber": "+216 12 345 678",
+  "role": "admin",
+  "zoneIds": ["zoneId1", "zoneId2"]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### GET /operators
+
+Get all operators (admin only).
+
+**Headers:** Authorization required (Admin)
+
+**Query params:**
+- `isActive` (optional): Filter by active status
+- `role` (optional): Filter by role (super_admin, admin, operator)
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 10
+}
+```
+
+---
+
+#### GET /operators/:id
+
+Get operator by ID (admin only).
+
+**Headers:** Authorization required (Admin)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PUT /operators/:id
+
+Update an operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Request:**
+```json
+{
+  "name": "Updated Name",
+  "role": "admin"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /operators/:id
+
+Delete an operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Response (204):** No content
+
+---
+
+#### PUT /operators/:id/activate
+
+Activate an operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Opérateur activé"
+}
+```
+
+---
+
+#### PUT /operators/:id/deactivate
+
+Deactivate an operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Opérateur désactivé"
+}
+```
+
+---
+
+#### PUT /operators/:id/zones
+
+Update zones for an operator (super admin only).
+
+**Headers:** Authorization required (Super Admin)
+
+**Request:**
+```json
+{
+  "zoneIds": ["zoneId1", "zoneId2", "zoneId3"]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Zones mises à jour"
+}
+```
+
+---
+
+### Street Endpoints
+
+#### POST /streets
+
+Create a new street.
+
+**Request:**
+```json
+{
+  "name": "Avenue Habib Bourguiba",
+  "zoneId": "uuid",
+  "type": "payable",
+  "points": [
+    { "latitude": 36.869394, "longitude": 10.343393 },
+    { "latitude": 36.867739, "longitude": 10.344717 }
+  ]
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### POST /streets/bulk
+
+Create multiple streets.
+
+**Request:**
+```json
+[
+  {
+    "name": "Street 1",
+    "zoneId": "uuid",
+    "type": "payable",
+    "points": [...]
+  },
+  {
+    "name": "Street 2",
+    "zoneId": "uuid",
+    "type": "free",
+    "points": [...]
+  }
+]
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 2
+}
+```
+
+---
+
+#### GET /streets
+
+Get all streets with optional filters.
+
+**Query params:**
+- `zoneId` (optional): Filter by zone ID
+- `type` (optional): Filter by type (payable, free, prohibited)
+- `isActive` (optional): Filter by active status (true/false)
+- `limit` (optional): Number of results
+- `skip` (optional): Pagination offset
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 10
+}
+```
+
+---
+
+#### GET /streets/admin
+
+Get streets filtered by operator's assigned zones.
+
+**Headers:** Authorization required (Operator token)
+
+**Query params:** Same as GET /streets
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 5
+}
+```
+
+---
+
+#### GET /streets/zone/:zoneId
+
+Get streets by zone.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 8
+}
+```
+
+---
+
+#### GET /streets/:id
+
+Get street by ID.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### PATCH /streets/:id
+
+Update a street.
+
+**Request:**
+```json
+{
+  "name": "Updated Street Name",
+  "type": "prohibited"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### DELETE /streets/:id
+
+Delete a street.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+---
+
+#### DELETE /streets/zone/:zoneId
+
+Delete all streets in a zone.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "deletedCount": 5
+  }
+}
+```
+
+---
+
+### QR Code Endpoints
+
+#### GET /qr-codes/zone/:zoneId
+
+Generate QR code for a zone (as JSON with data URL).
+
+**Query params:**
+- `size` (optional): QR code size in pixels (default 300)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "zoneId": "uuid",
+    "dataUrl": "data:image/png;base64,...",
+    "content": "zoneId-content"
+  }
+}
+```
+
+---
+
+#### GET /qr-codes/zone/:zoneId/image
+
+Generate QR code as PNG image.
+
+**Query params:**
+- `size` (optional): Image size in pixels (default 300)
+
+**Response:** PNG image with `Content-Type: image/png`
+
+---
+
+#### POST /qr-codes
+
+Generate QR code (POST endpoint).
+
+**Request:**
+```json
+{
+  "zoneId": "uuid",
+  "size": 300
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### POST /qr-codes/bulk
+
+Generate QR codes for multiple zones.
+
+**Request:**
+```json
+{
+  "zoneIds": ["uuid1", "uuid2", "uuid3"],
+  "size": 300
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 3
+}
+```
+
+---
+
+### Wallet Endpoints
+
+#### GET /wallet
+
+Get current wallet balance.
+
+**Headers:** Authorization required (User token)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "uuid",
+    "balance": 25.0,
+    "currency": "TND"
+  }
+}
+```
+
+---
+
+#### GET /wallet/transactions
+
+Get wallet transaction history.
+
+**Headers:** Authorization required (User token)
+
+**Query params:**
+- `limit` (optional): Number of results (default 50)
+- `skip` (optional): Pagination offset (default 0)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 20
 }
 ```
 
@@ -935,15 +2397,15 @@ Get wallet balance.
 
 #### POST /wallet/topup
 
-Top up wallet balance.
+Top up wallet (add funds).
 
-**Headers:** Authorization required
+**Headers:** Authorization required (User token)
 
 **Request:**
 ```json
 {
   "amount": 50.0,
-  "payment_method_id": "uuid"
+  "referenceId": "payment_intent_id"
 }
 ```
 
@@ -951,9 +2413,266 @@ Top up wallet balance.
 ```json
 {
   "success": true,
-  "new_balance": 75.0
+  "data": {
+    "newBalance": 75.0,
+    "transaction": { ... }
+  }
 }
 ```
+
+---
+
+#### POST /wallet/pay
+
+Pay from wallet (deduct funds).
+
+**Headers:** Authorization required (User token)
+
+**Request:**
+```json
+{
+  "amount": 10.0,
+  "reason": "parking_payment",
+  "referenceId": "session_id"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "newBalance": 65.0,
+    "transaction": { ... }
+  }
+}
+```
+
+---
+
+### Wallet Admin Endpoints
+
+#### GET /wallets
+
+Get all wallets (admin only).
+
+**Headers:** Authorization required (Admin token)
+
+**Query params:**
+- `limit` (optional): Number of results (default 50)
+- `skip` (optional): Pagination offset (default 0)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 50,
+  "total": 500
+}
+```
+
+---
+
+#### GET /wallets/user/:userId
+
+Get wallet by user ID (admin only).
+
+**Headers:** Authorization required (Admin token)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+---
+
+#### GET /wallets/transactions
+
+Get all transactions (admin only).
+
+**Headers:** Authorization required (Admin token)
+
+**Query params:**
+- `limit` (optional): Number of results (default 50)
+- `skip` (optional): Pagination offset (default 0)
+- `userId` (optional): Filter by user ID
+- `type` (optional): Filter by type (credit, debit)
+- `reason` (optional): Filter by reason
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 50,
+  "total": 1000
+}
+```
+
+---
+
+#### GET /wallets/user/:userId/transactions
+
+Get transactions for a specific user (admin only).
+
+**Headers:** Authorization required (Admin token)
+
+**Query params:**
+- `limit` (optional): Number of results (default 50)
+- `skip` (optional): Pagination offset (default 0)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 20
+}
+```
+
+---
+
+#### POST /wallets/user/:userId/credit
+
+Credit a user's wallet (admin only).
+
+**Headers:** Authorization required (Admin token)
+
+**Request:**
+```json
+{
+  "amount": 100.0,
+  "reason": "adjustment"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "newBalance": 125.0,
+    "transaction": { ... }
+  }
+}
+```
+
+---
+
+#### POST /wallets/user/:userId/rebuild
+
+Rebuild a user's wallet balance from ledger (super admin only).
+
+**Headers:** Authorization required (Super Admin token)
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "oldBalance": 100.0,
+    "newBalance": 125.5,
+    "difference": 25.5
+  },
+  "message": "Wallet balance rebuilt from ledger"
+}
+```
+
+---
+
+## Operators Module
+
+The Operators module manages administrative users who oversee parking operations.
+
+### Overview
+
+Operators authenticate with phone OTP and can:
+- Manage parking zones and streets
+- View tickets and sessions within their assigned zones
+- Access administrative dashboards
+
+### Operator Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Operator's full name |
+| `phoneNumber` | string | Unique phone number (login credential) |
+| `role` | enum | super_admin, admin, or operator |
+| `zoneIds` | ObjectId[] | References to ParkingZone |
+| `isActive` | boolean | Whether operator can login |
+
+### Role Hierarchy
+
+- **super_admin**: Full system access, can manage all operators and zones
+- **admin**: Can view all data, limited management capabilities
+- **operator**: Can only access assigned zones and their data
+
+### Key Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/operators/auth/request-otp` | Request OTP |
+| `POST` | `/operators/auth/verify-otp` | Verify OTP and login |
+| `GET` | `/operators/me` | Get current operator profile |
+| `POST` | `/operators` | Create new operator (super admin) |
+| `GET` | `/operators` | List all operators (admin) |
+| `PUT` | `/operators/:id` | Update operator (super admin) |
+| `PUT` | `/operators/:id/zones` | Assign zones to operator |
+
+---
+
+## Streets Module
+
+The Streets module manages street data for parking zones, including polylines for map display.
+
+### Overview
+
+Streets define the actual roads within parking zones where parking is available, prohibited, or free.
+
+### Street Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Street name |
+| `zoneId` | ObjectId | Reference to ParkingZone |
+| `type` | enum | payable, free, or prohibited |
+| `points` | GeoJSON[] | Array of lat/lng coordinates |
+| `isActive` | boolean | Whether street is active |
+
+### Street Types
+
+- **payable**: Parking requires payment
+- **free**: Free parking available
+- **prohibited**: Parking not allowed
+
+### Key Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/streets` | Create a new street |
+| `POST` | `/streets/bulk` | Create multiple streets |
+| `GET` | `/streets` | List all streets |
+| `GET` | `/streets/admin` | List streets (filtered by operator zones) |
+| `GET` | `/streets/zone/:zoneId` | Get streets by zone |
+| `PATCH` | `/streets/:id` | Update a street |
+| `DELETE` | `/streets/:id` | Delete a street |
+| `DELETE` | `/streets/zone/:zoneId` | Delete all streets in a zone |
+
+---
+
+### Ticket-Token Endpoints (Deprecated - See Ticket Endpoints)
+
+**Note:** Ticket token endpoints have been integrated into the Tickets controller. Use `/tickets/:id/token/*` endpoints instead of the standalone `/ticket-tokens/*` endpoints documented below.
+
+### Ticket-Token Endpoints (Deprecated - See Ticket Endpoints)
+
+**Note:** Ticket token endpoints have been integrated into the Tickets controller. Use `/tickets/:id/token/*` endpoints instead of the standalone `/ticket-tokens/*` endpoints.
+
+For secure QR code token generation and verification, see the Ticket Endpoints section above.
 
 ---
 
@@ -977,6 +2696,7 @@ Agents authenticate with email/password and can:
 | `name` | string | Agent's full name |
 | `email` | string | Unique email (login credential) |
 | `password` | string | Hashed with bcrypt |
+| `phone` | string | Agent's phone number |
 | `assignedZones` | ObjectId[] | References to ParkingZone |
 | `isActive` | boolean | Whether agent can login |
 
@@ -986,10 +2706,16 @@ Agents authenticate with email/password and can:
 |--------|----------|-------------|
 | `POST` | `/agents/login` | Agent authentication |
 | `POST` | `/agents` | Create new agent |
+| `GET` | `/agents/me` | Get current agent profile |
 | `GET` | `/agents` | List all agents |
-| `GET` | `/agents/code/:agentCode` | Find by badge number |
+| `GET` | `/agents/zone/:zoneId` | Get agents by zone |
+| `GET` | `/agents/:id` | Get agent by ID |
+| `PUT` | `/agents/:id` | Update agent |
 | `PATCH` | `/agents/:id/zones` | Assign zones to agent |
 | `PATCH` | `/agents/:id/change-password` | Change password |
+| `PATCH` | `/agents/:id/reset-password` | Reset password (admin) |
+| `PATCH` | `/agents/:id/activate` | Activate agent |
+| `PATCH` | `/agents/:id/deactivate` | Deactivate agent |
 
 ### Agent Workflow
 
@@ -998,7 +2724,7 @@ Agents authenticate with email/password and can:
    POST /agents/login { email, password }
 
 2. Agent checks vehicle for active session
-   GET /parking-sessions/plate/:licensePlate/active
+   POST /parking-sessions/check-vehicle { plate, zoneId }
 
 3. If violation found, issue ticket
    POST /tickets {
