@@ -38,6 +38,10 @@ export class ParkingZone {
   @Prop({ required: true, default: 0 })
   numberOfPlaces: number;
 
+  @Prop({ type: String, required: true })
+  address: string;
+  @Prop({ type: String, required: true })
+  phoneNumber: string;
   @Prop()
   description?: string;
 

@@ -250,6 +250,7 @@ export class TicketsService {
       .populate('parkingSessionId')
       .populate('userId')
       .populate('agentId')
+      .populate('parkingZoneId', 'name address phoneNumber')
       .exec();
 
     if (!ticket) {
@@ -266,6 +267,7 @@ export class TicketsService {
       .findOne({ ticketNumber: ticketNumber.toUpperCase() })
       .populate('parkingSessionId')
       .populate('agentId')
+      .populate('parkingZoneId', 'name address phoneNumber')
       .exec();
 
     if (!ticket) {
@@ -560,5 +562,151 @@ export class TicketsService {
 
     // Get buffer
     return this.ticketTokensService.getQrCodeBuffer(id, size);
+  }
+
+  /**
+   * Get print-ready ticket data with structured lines and QR code
+   * Optimized to return only essential data for printing
+   */
+  async getPrintData(id: string): Promise<{
+    lines: Array<{ label: string; value: string; type: string }>;
+    qrCode: {
+      dataUrl: string;
+      buffer: string;
+      content: string;
+    };
+    ticketId: string;
+    ticketNumber: string;
+  }> {
+    // Fetch ticket with only required fields and populated references
+    const ticket = await this.ticketModel
+      .findById(id)
+      .select(
+        'ticketNumber licensePlate reason fineAmount status issuedAt dueDate position parkingZoneId agentId',
+      )
+      .populate('parkingZoneId', 'name address phoneNumber')
+      .populate('agentId', 'name username')
+      .lean()
+      .exec();
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket #${id} not found`);
+    }
+
+    // Get QR code data
+    const qrData = await this.ticketTokensService.generateTokenForTicket(id);
+    const qrBuffer = await this.ticketTokensService.getQrCodeBuffer(id);
+
+    // Extract populated data
+    const zone = ticket.parkingZoneId as any;
+    const agent = ticket.agentId as any;
+
+    // Format date helper
+    const formatDate = (date: Date): string => {
+      const d = new Date(date);
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
+      const hours = d.getHours().toString().padStart(2, '0');
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    };
+
+    const formatDateOnly = (date: Date): string => {
+      const d = new Date(date);
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = (d.getMonth() + 1).toString().padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    // Get reason label
+    const reasonLabels: Record<string, string> = {
+      car_sabot: 'Car Sabot',
+      pound: 'Pound',
+    };
+
+    // Get status label
+    const statusLabels: Record<string, string> = {
+      pending: 'Pending',
+      paid: 'Paid',
+      appealed: 'Appealed',
+      sabot_removed: 'Sabot Removed',
+      dismissed: 'Dismissed',
+      overdue: 'Overdue',
+    };
+
+    // Format coordinates
+    const coords = ticket.position?.coordinates || [];
+    const lat = coords[1]?.toFixed(6) || '';
+    const lng = coords[0]?.toFixed(6) || '';
+
+    // Build structured lines
+    const lines: Array<{ label: string; value: string; type: string }> = [
+      { label: 'Ticket Number', value: ticket.ticketNumber, type: 'header' },
+      { label: 'License Plate', value: ticket.licensePlate, type: 'plate' },
+      {
+        label: 'Reason',
+        value: reasonLabels[ticket.reason] || ticket.reason,
+        type: 'text',
+      },
+      {
+        label: 'Fine Amount',
+        value: `${ticket.fineAmount.toFixed(2)} TND`,
+        type: 'amount',
+      },
+      { label: 'Issued At', value: formatDate(ticket.issuedAt), type: 'date' },
+      { label: 'Due Date', value: formatDateOnly(ticket.dueDate), type: 'date' },
+      {
+        label: 'Status',
+        value: statusLabels[ticket.status] || ticket.status,
+        type: 'status',
+      },
+    ];
+
+    // Add zone info if populated (check for name property to confirm it's populated)
+    if (zone && zone.name) {
+      lines.push({ label: 'Zone', value: zone.name, type: 'text' });
+      if (zone.address) {
+        lines.push({ label: 'Address', value: zone.address, type: 'text' });
+      }
+      if (zone.phoneNumber) {
+        lines.push({ label: 'Phone', value: zone.phoneNumber, type: 'phone' });
+      }
+    }
+
+    // Add agent info if populated (check for name property to confirm it's populated)
+    if (agent && agent.name) {
+      const agentName = agent.name;
+      const agentCode = agent.username || '';
+      lines.push({
+        label: 'Agent',
+        value: agentCode ? `${agentName} (${agentCode})` : agentName,
+        type: 'text',
+      });
+    }
+
+    // Add location coordinates
+    if (lat && lng) {
+      lines.push({ label: 'Location', value: `${lat}, ${lng}`, type: 'coordinates' });
+    }
+
+    // Add payment instructions
+    lines.push({
+      label: 'Payment Info',
+      value: 'Pay online or at any authorized office before the due date',
+      type: 'footer',
+    });
+
+    return {
+      lines,
+      qrCode: {
+        dataUrl: qrData.qrCodeDataUrl,
+        buffer: qrBuffer.buffer.toString('base64'),
+        content: qrData.qrCodeContent,
+      },
+      ticketId: (ticket._id as any).toString(),
+      ticketNumber: ticket.ticketNumber,
+    };
   }
 }

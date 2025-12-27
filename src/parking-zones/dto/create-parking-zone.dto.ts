@@ -27,6 +27,12 @@ export class CreateParkingZoneDto {
   @IsOptional()
   @IsString()
   description?: string;
+  @IsOptional()
+  @IsString()
+  address?: string;
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
 
   @IsOptional()
   @IsBoolean()

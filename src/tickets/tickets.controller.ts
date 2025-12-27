@@ -271,6 +271,19 @@ export class TicketsController {
   }
 
   /**
+   * Get print-ready ticket data with structured lines and QR code
+   * GET /tickets/:id/print
+   */
+  @Get(':id/print')
+  async getPrintData(@Param('id') id: string) {
+    const result = await this.ticketsService.getPrintData(id);
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  /**
    * Get a single ticket by ID
    * GET /tickets/:id
    */
