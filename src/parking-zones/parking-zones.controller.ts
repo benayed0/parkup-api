@@ -16,17 +16,43 @@ import { ParkingZonesService } from './parking-zones.service';
 import { CreateParkingZoneDto, UpdateParkingZoneDto } from './dto';
 import { OperatorJwtAuthGuard } from '../operators/guards/operator-jwt-auth.guard';
 import { OperatorRole } from '../operators/schemas/operator.schema';
+import { ParkingZoneDocument } from './schemas/parking-zone.schema';
 
 @Controller('zones')
 export class ParkingZonesController {
   constructor(private readonly parkingZonesService: ParkingZonesService) {}
+
+  /**
+   * Transform zone response for mobile clients
+   * Computes current operatingHours and excludes seasonalOperatingHours
+   */
+  private transformZoneForMobile(zone: ParkingZoneDocument) {
+    const zoneObj = zone.toObject();
+    const { seasonalOperatingHours, ...rest } = zoneObj;
+    return {
+      ...rest,
+      operatingHours: this.parkingZonesService.getCurrentOperatingHours(zone),
+    };
+  }
+
+  /**
+   * Transform zone response for admin clients
+   * Computes current operatingHours but keeps seasonalOperatingHours for editing
+   */
+  private transformZoneForAdmin(zone: ParkingZoneDocument) {
+    const zoneObj = zone.toObject();
+    return {
+      ...zoneObj,
+      operatingHours: this.parkingZonesService.getCurrentOperatingHours(zone),
+    };
+  }
 
   @Post()
   async create(@Body() createDto: CreateParkingZoneDto) {
     const zone = await this.parkingZonesService.create(createDto);
     return {
       success: true,
-      data: zone,
+      data: this.transformZoneForAdmin(zone),
     };
   }
 
@@ -43,7 +69,7 @@ export class ParkingZonesController {
     });
     return {
       success: true,
-      data: zones,
+      data: zones.map((zone) => this.transformZoneForMobile(zone)),
       count: zones.length,
     };
   }
@@ -88,7 +114,7 @@ export class ParkingZonesController {
     });
     return {
       success: true,
-      data: zones,
+      data: zones.map((zone) => this.transformZoneForAdmin(zone)),
       count: zones.length,
     };
   }
@@ -98,7 +124,7 @@ export class ParkingZonesController {
     const zone = await this.parkingZonesService.findByCode(code);
     return {
       success: true,
-      data: zone,
+      data: this.transformZoneForMobile(zone),
     };
   }
 
@@ -107,7 +133,7 @@ export class ParkingZonesController {
     const zone = await this.parkingZonesService.findOne(id);
     return {
       success: true,
-      data: zone,
+      data: this.transformZoneForMobile(zone),
     };
   }
 
@@ -119,7 +145,7 @@ export class ParkingZonesController {
     const zone = await this.parkingZonesService.update(id, updateDto);
     return {
       success: true,
-      data: zone,
+      data: this.transformZoneForAdmin(zone),
     };
   }
 

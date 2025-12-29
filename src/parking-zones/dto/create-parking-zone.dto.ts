@@ -7,7 +7,10 @@ import {
   ArrayMinSize,
   IsArray,
   IsNumber,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { SeasonalPeriodDto } from './seasonal-period.dto';
 
 export class CreateParkingZoneDto {
   @IsString()
@@ -44,6 +47,12 @@ export class CreateParkingZoneDto {
   @IsString()
   @IsNotEmpty()
   operatingHours: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => SeasonalPeriodDto)
+  seasonalOperatingHours?: SeasonalPeriodDto[];
 
   @IsNotEmpty()
   prices: { car_sabot: number; pound: number };
