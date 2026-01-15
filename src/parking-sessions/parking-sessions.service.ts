@@ -2,9 +2,12 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ParkingSessionsGateway } from './parking-sessions.gateway';
 import {
   ParkingSession,
   ParkingSessionDocument,
@@ -26,6 +29,8 @@ export class ParkingSessionsService {
   constructor(
     @InjectModel(ParkingSession.name)
     private parkingSessionModel: Model<ParkingSessionDocument>,
+    @Inject(forwardRef(() => ParkingSessionsGateway))
+    private readonly gateway: ParkingSessionsGateway,
   ) {}
 
   /**
@@ -66,7 +71,14 @@ export class ParkingSessionsService {
       status: createDto.status || ParkingSessionStatus.ACTIVE,
     });
 
-    return session.save();
+    const savedSession = await session.save();
+
+    // Emit real-time event for new session
+    if (savedSession.status === ParkingSessionStatus.ACTIVE) {
+      this.gateway.emitSessionCreated(savedSession);
+    }
+
+    return savedSession;
   }
 
   /**
@@ -292,6 +304,11 @@ export class ParkingSessionsService {
       )
       .exec();
 
+    // Emit real-time event for extended session
+    if (updatedSession) {
+      this.gateway.emitSessionUpdated(updatedSession);
+    }
+
     return updatedSession!;
   }
 
@@ -305,7 +322,14 @@ export class ParkingSessionsService {
       throw new BadRequestException('Session is not active');
     }
 
-    return this.update(id, { status: ParkingSessionStatus.COMPLETED });
+    const updatedSession = await this.update(id, {
+      status: ParkingSessionStatus.COMPLETED,
+    });
+
+    // Emit real-time event for ended session
+    this.gateway.emitSessionEnded(updatedSession, 'completed');
+
+    return updatedSession;
   }
 
   /**
@@ -318,7 +342,14 @@ export class ParkingSessionsService {
       throw new BadRequestException('Can only cancel active sessions');
     }
 
-    return this.update(id, { status: ParkingSessionStatus.CANCELLED });
+    const updatedSession = await this.update(id, {
+      status: ParkingSessionStatus.CANCELLED,
+    });
+
+    // Emit real-time event for cancelled session
+    this.gateway.emitSessionEnded(updatedSession, 'cancelled');
+
+    return updatedSession;
   }
 
   /**

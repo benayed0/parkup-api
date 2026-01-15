@@ -1,10 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Configure WebSocket adapter
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Get config service
   const configService = app.get(ConfigService);
@@ -66,5 +70,6 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`🚀 ParkUp API running on: http://localhost:${port}/api/v1`);
+  console.log(`🔌 WebSocket available at: ws://localhost:${port}/parking-sessions`);
 }
 bootstrap();

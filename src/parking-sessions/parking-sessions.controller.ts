@@ -66,6 +66,29 @@ export class ParkingSessionsController {
   }
 
   /**
+   * Get active sessions by zone
+   * GET /parking-sessions/zone/:zoneId/active
+   */
+  @Get('zone/:zoneId/active')
+  async findActiveByZone(
+    @Param('zoneId') zoneId: string,
+    @Query('limit') limit?: string,
+    @Query('skip') skip?: string,
+  ) {
+    const sessions = await this.parkingSessionsService.findAll({
+      zoneId,
+      status: ParkingSessionStatus.ACTIVE,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      skip: skip ? parseInt(skip, 10) : undefined,
+    });
+    return {
+      success: true,
+      data: sessions,
+      count: sessions.length,
+    };
+  }
+
+  /**
    * Get user's active session
    * GET /parking-sessions/user/:userId/active
    */
