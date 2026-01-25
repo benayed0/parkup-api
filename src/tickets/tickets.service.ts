@@ -218,15 +218,20 @@ export class TicketsService {
   }
 
   /**
-   * Find unpaid tickets for a license plate
+   * Find unpaid tickets for a license plate (searches by plate.formatted)
    */
   async findUnpaidByLicensePlate(
-    licensePlate: string,
+    formattedPlate: string,
   ): Promise<TicketDocument[]> {
-    const normalizedPlate = licensePlate.toUpperCase().replace(/\s/g, '');
+    const normalizedPlate = formattedPlate.toUpperCase().replace(/\s+/g, ' ').trim();
+
+    // Search by plate.formatted (preferred) OR legacy licensePlate field
     return this.ticketModel
       .find({
-        licensePlate: normalizedPlate,
+        $or: [
+          { 'plate.formatted': normalizedPlate },
+          { licensePlate: normalizedPlate },
+        ],
         status: { $in: [TicketStatus.PENDING, TicketStatus.OVERDUE] },
       })
       .exec();
@@ -239,6 +244,15 @@ export class TicketsService {
     return this.ticketModel
       .find({ parkingSessionId: new Types.ObjectId(sessionId) })
       .exec();
+  }
+
+  /**
+   * Check if a license plate has any unpaid tickets
+   * Returns true if there are pending/overdue tickets for this plate
+   */
+  async hasUnpaidTickets(licensePlate: string): Promise<boolean> {
+    const tickets = await this.findUnpaidByLicensePlate(licensePlate);
+    return tickets.length > 0;
   }
 
   /**
@@ -446,21 +460,6 @@ export class TicketsService {
       .exec();
 
     return result.modifiedCount;
-  }
-
-  /**
-   * Check if a license plate has unpaid tickets
-   */
-  async hasUnpaidTickets(licensePlate: string): Promise<boolean> {
-    const normalizedPlate = licensePlate.toUpperCase().replace(/\s/g, '');
-    const count = await this.ticketModel
-      .countDocuments({
-        licensePlate: normalizedPlate,
-        status: { $in: [TicketStatus.PENDING, TicketStatus.OVERDUE] },
-      })
-      .exec();
-
-    return count > 0;
   }
 
   /**

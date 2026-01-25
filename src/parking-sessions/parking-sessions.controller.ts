@@ -89,6 +89,35 @@ export class ParkingSessionsController {
   }
 
   /**
+   * Get enforcement data for agents
+   * Returns expired sessions (violations) and soon-to-expire sessions
+   * By default, excludes expired sessions that already have tickets
+   * GET /parking-sessions/agent/enforcement?zoneId=xxx&expiringThresholdMinutes=15&includeTicketed=true
+   */
+  @Get('agent/enforcement')
+  async getEnforcementData(
+    @Query('zoneId') zoneId?: string,
+    @Query('expiringThresholdMinutes') expiringThresholdMinutes?: string,
+    @Query('limit') limit?: string,
+    @Query('includeTicketed') includeTicketed?: string,
+  ) {
+    const data = await this.parkingSessionsService.getEnforcementData({
+      zoneId,
+      expiringThresholdMinutes: expiringThresholdMinutes
+        ? parseInt(expiringThresholdMinutes, 10)
+        : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      includeTicketed: includeTicketed === 'true',
+    });
+
+    return {
+      success: true,
+      data,
+      summary: data.summary,
+    };
+  }
+
+  /**
    * Get user's active session
    * GET /parking-sessions/user/:userId/active
    */

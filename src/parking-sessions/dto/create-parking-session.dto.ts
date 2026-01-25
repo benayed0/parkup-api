@@ -6,6 +6,7 @@ import {
   IsDateString,
   IsOptional,
   IsEnum,
+  IsIn,
   Min,
   IsArray,
   ArrayMinSize,
@@ -70,4 +71,14 @@ export class CreateParkingSessionDto {
   @IsOptional()
   @IsEnum(ParkingSessionStatus)
   status?: ParkingSessionStatus;
+
+  /**
+   * How the location was obtained
+   * - gps_auto: Automatic GPS detection
+   * - user_pin: User manually placed marker on map
+   * - zone_centroid: Only zone selected (iOS fallback)
+   */
+  @IsOptional()
+  @IsIn(['gps_auto', 'user_pin', 'zone_centroid'])
+  locationSource?: string;
 }

@@ -23,14 +23,24 @@ import {
   parseLicensePlateString,
   normalizeLicensePlate,
 } from '../shared/license-plate';
+import { TicketsService } from '../tickets/tickets.service';
+import {
+  ParkingZone,
+  ParkingZoneDocument,
+} from '../parking-zones/schemas/parking-zone.schema';
+import { isPointInPolygon } from '../shared/geo-utils';
 
 @Injectable()
 export class ParkingSessionsService {
   constructor(
     @InjectModel(ParkingSession.name)
     private parkingSessionModel: Model<ParkingSessionDocument>,
+    @InjectModel(ParkingZone.name)
+    private parkingZoneModel: Model<ParkingZoneDocument>,
     @Inject(forwardRef(() => ParkingSessionsGateway))
     private readonly gateway: ParkingSessionsGateway,
+    @Inject(forwardRef(() => TicketsService))
+    private readonly ticketsService: TicketsService,
   ) {}
 
   /**
@@ -54,6 +64,21 @@ export class ParkingSessionsService {
         )
       : parseLicensePlateString(createDto.licensePlate || '');
 
+    // Fetch zone to validate coordinates against boundaries
+    const zone = await this.parkingZoneModel.findById(createDto.zoneId).lean();
+
+    // Validate coordinates against zone boundaries
+    let locationWithinZone = false;
+    if (zone?.boundaries && createDto.coordinates) {
+      locationWithinZone = isPointInPolygon(
+        createDto.coordinates as [number, number],
+        zone.boundaries,
+      );
+    }
+
+    // Set locationSource from DTO (client sends this)
+    const locationSource = createDto.locationSource || 'unknown';
+
     const session = new this.parkingSessionModel({
       userId,
       zoneId: new Types.ObjectId(createDto.zoneId),
@@ -69,6 +94,8 @@ export class ParkingSessionsService {
       durationMinutes: createDto.durationMinutes,
       amount: createDto.amount,
       status: createDto.status || ParkingSessionStatus.ACTIVE,
+      locationSource,
+      locationWithinZone,
     });
 
     const savedSession = await session.save();
@@ -406,5 +433,130 @@ export class ParkingSessionsService {
       .exec();
 
     return result;
+  }
+
+  /**
+   * Get enforcement data for agents
+   * Returns expired sessions (violations) and soon-to-expire sessions
+   * By default, excludes expired sessions that already have tickets
+   * Includes location confidence data and zone boundaries
+   */
+  async getEnforcementData(options: {
+    zoneId?: string;
+    expiringThresholdMinutes?: number;
+    limit?: number;
+    includeTicketed?: boolean;
+  }) {
+    const now = new Date();
+    const thresholdMinutes = options.expiringThresholdMinutes || 15;
+    const thresholdTime = new Date(
+      now.getTime() + thresholdMinutes * 60 * 1000,
+    );
+    const limit = options.limit || 50;
+
+    // Build base query for zone filtering
+    const baseQuery: Record<string, any> = {};
+    if (options.zoneId) {
+      baseQuery.zoneId = new Types.ObjectId(options.zoneId);
+    }
+
+    // Get expired sessions (status = EXPIRED)
+    const expiredSessions = await this.parkingSessionModel
+      .find({ ...baseQuery, status: ParkingSessionStatus.EXPIRED })
+      .sort({ endTime: 1 }) // Oldest first (most overdue)
+      .limit(limit)
+      .lean()
+      .exec();
+
+    // Get soon-to-expire sessions (status = ACTIVE, endTime within threshold)
+    const expiringSoonSessions = await this.parkingSessionModel
+      .find({
+        ...baseQuery,
+        status: ParkingSessionStatus.ACTIVE,
+        endTime: { $gt: now, $lte: thresholdTime },
+      })
+      .sort({ endTime: 1 }) // Soonest expiring first
+      .limit(limit)
+      .lean()
+      .exec();
+
+    // Fetch zone boundaries for all unique zones
+    const allSessions = [...expiredSessions, ...expiringSoonSessions];
+    const zoneIds = [
+      ...new Set(allSessions.map((s) => s.zoneId.toString())),
+    ];
+    const zones = await this.parkingZoneModel
+      .find({ _id: { $in: zoneIds } })
+      .lean();
+    const zoneMap = new Map(zones.map((z) => [z._id.toString(), z]));
+
+    // Check which expired sessions already have tickets (by plate.formatted)
+    const expired = await Promise.all(
+      expiredSessions.map(async (session) => {
+        // Use plate.formatted to find tickets (more reliable than session ID)
+        const formattedPlate = session.plate?.formatted || session.licensePlate;
+        const hasTicket = await this.ticketsService.hasUnpaidTickets(
+          formattedPlate,
+        );
+        const zone = zoneMap.get(session.zoneId.toString());
+        return {
+          id: session._id.toString(),
+          licensePlate: session.licensePlate,
+          plate: session.plate,
+          location: session.location,
+          zoneName: session.zoneName,
+          zoneId: session.zoneId.toString(),
+          endTime: session.endTime,
+          category: 'expired' as const,
+          minutesOverdue: Math.floor(
+            (now.getTime() - new Date(session.endTime).getTime()) / 60000,
+          ),
+          hasTicket,
+          // Location confidence fields
+          locationSource: (session as any).locationSource || 'unknown',
+          locationWithinZone: (session as any).locationWithinZone || false,
+          zoneBoundaries: zone?.boundaries || null,
+          zoneLocation: zone?.location || null,
+        };
+      }),
+    );
+
+    // Map expiring soon sessions
+    const expiringSoon = expiringSoonSessions.map((session) => {
+      const zone = zoneMap.get(session.zoneId.toString());
+      return {
+        id: session._id.toString(),
+        licensePlate: session.licensePlate,
+        plate: session.plate,
+        location: session.location,
+        zoneName: session.zoneName,
+        zoneId: session.zoneId.toString(),
+        endTime: session.endTime,
+        category: 'expiring_soon' as const,
+        minutesRemaining: Math.floor(
+          (new Date(session.endTime).getTime() - now.getTime()) / 60000,
+        ),
+        // Location confidence fields
+        locationSource: (session as any).locationSource || 'unknown',
+        locationWithinZone: (session as any).locationWithinZone || false,
+        zoneBoundaries: zone?.boundaries || null,
+        zoneLocation: zone?.location || null,
+      };
+    });
+
+    // Filter out ticketed sessions by default (unless includeTicketed is true)
+    const filteredExpired = options.includeTicketed
+      ? expired
+      : expired.filter((s) => !s.hasTicket);
+
+    return {
+      expired: filteredExpired,
+      expiringSoon,
+      summary: {
+        totalExpired: filteredExpired.length,
+        totalExpiringSoon: expiringSoon.length,
+        expiredWithoutTicket: filteredExpired.filter((s) => !s.hasTicket).length,
+      },
+    };
   }
 }
