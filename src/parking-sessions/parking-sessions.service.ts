@@ -440,10 +440,14 @@ export class ParkingSessionsService {
    * Returns expired sessions (violations) and soon-to-expire sessions
    * By default, excludes expired sessions that already have tickets
    * Includes location confidence data and zone boundaries
+   *
+   * Sessions expired longer than maxExpiredHours are auto-dismissed (likely vehicle left)
+   * Results are sorted by priority: recently expired first (more likely still parked)
    */
   async getEnforcementData(options: {
     zoneId?: string;
     expiringThresholdMinutes?: number;
+    maxExpiredHours?: number;
     limit?: number;
     includeTicketed?: boolean;
   }) {
@@ -454,16 +458,27 @@ export class ParkingSessionsService {
     );
     const limit = options.limit || 50;
 
+    // Auto-dismiss sessions expired longer than this (default 2 hours)
+    const maxExpiredHours = options.maxExpiredHours ?? 2;
+    const staleThreshold = new Date(
+      now.getTime() - maxExpiredHours * 60 * 60 * 1000,
+    );
+
     // Build base query for zone filtering
     const baseQuery: Record<string, any> = {};
     if (options.zoneId) {
       baseQuery.zoneId = new Types.ObjectId(options.zoneId);
     }
 
-    // Get expired sessions (status = EXPIRED)
+    // Get expired sessions (status = EXPIRED, but not older than maxExpiredHours)
+    // Sorted by endTime descending = recently expired first (higher priority)
     const expiredSessions = await this.parkingSessionModel
-      .find({ ...baseQuery, status: ParkingSessionStatus.EXPIRED })
-      .sort({ endTime: 1 }) // Oldest first (most overdue)
+      .find({
+        ...baseQuery,
+        status: ParkingSessionStatus.EXPIRED,
+        endTime: { $gte: staleThreshold }, // Filter out stale sessions
+      })
+      .sort({ endTime: -1 }) // Recently expired first (more likely still parked)
       .limit(limit)
       .lean()
       .exec();

@@ -98,6 +98,7 @@ export class ParkingSessionsController {
   async getEnforcementData(
     @Query('zoneId') zoneId?: string,
     @Query('expiringThresholdMinutes') expiringThresholdMinutes?: string,
+    @Query('maxExpiredHours') maxExpiredHours?: string,
     @Query('limit') limit?: string,
     @Query('includeTicketed') includeTicketed?: string,
   ) {
@@ -105,6 +106,9 @@ export class ParkingSessionsController {
       zoneId,
       expiringThresholdMinutes: expiringThresholdMinutes
         ? parseInt(expiringThresholdMinutes, 10)
+        : undefined,
+      maxExpiredHours: maxExpiredHours
+        ? parseFloat(maxExpiredHours)
         : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       includeTicketed: includeTicketed === 'true',
