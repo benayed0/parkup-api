@@ -290,9 +290,22 @@ export class TicketsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const ticket = await this.ticketsService.findOne(id);
+
+    // Generate QR code for the ticket
+    const qrData =
+      await this.ticketTokensService.generateTokenForTicket(id);
+    const qrBuffer = await this.ticketTokensService.getQrCodeBuffer(id);
+
     return {
       success: true,
-      data: ticket,
+      data: {
+        ...ticket.toJSON(),
+        qrCode: {
+          dataUrl: qrData.qrCodeDataUrl,
+          buffer: qrBuffer.buffer.toString('base64'),
+          content: qrData.qrCodeContent,
+        },
+      },
     };
   }
 
