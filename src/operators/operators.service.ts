@@ -4,6 +4,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,6 +13,7 @@ import {
   Operator,
   OperatorDocument,
   OperatorRole,
+  ROLE_HIERARCHY,
 } from './schemas/operator.schema';
 import {
   CreateOperatorDto,
@@ -33,9 +35,39 @@ export class OperatorsService {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * Returns all roles strictly below the given role in the hierarchy.
+   */
+  private getRolesBelow(role: OperatorRole): OperatorRole[] {
+    const callerLevel = ROLE_HIERARCHY[role];
+    return Object.entries(ROLE_HIERARCHY)
+      .filter(([, level]) => level < callerLevel)
+      .map(([r]) => r as OperatorRole);
+  }
+
+  /**
+   * Checks that the caller's role is strictly above the target role.
+   * Throws ForbiddenException if not.
+   */
+  private assertRoleAbove(
+    callerRole: OperatorRole,
+    targetRole: OperatorRole,
+    action: string,
+  ): void {
+    if (ROLE_HIERARCHY[callerRole] <= ROLE_HIERARCHY[targetRole]) {
+      throw new ForbiddenException(
+        `Accès refusé: vous ne pouvez pas ${action} un opérateur avec un rôle égal ou supérieur au vôtre`,
+      );
+    }
+  }
+
   async create(
     createOperatorDto: CreateOperatorDto,
+    caller: OperatorDocument,
   ): Promise<OperatorDocument> {
+    const targetRole = createOperatorDto.role ?? OperatorRole.SUPERVISOR;
+    this.assertRoleAbove(caller.role, targetRole, 'créer');
+
     const existing = await this.operatorModel.findOne({
       email: createOperatorDto.email.toLowerCase(),
     });
@@ -47,26 +79,41 @@ export class OperatorsService {
     const operator = new this.operatorModel({
       ...createOperatorDto,
       email: createOperatorDto.email.toLowerCase(),
-      role: createOperatorDto.role ?? OperatorRole.SUPERVISOR,
+      role: targetRole,
       isActive: createOperatorDto.isActive ?? true,
     });
 
     return operator.save();
   }
 
-  async findAll(filters?: {
-    isActive?: boolean;
-    role?: OperatorRole;
-    limit?: number;
-    skip?: number;
-  }): Promise<OperatorDocument[]> {
+  async findAll(
+    caller: OperatorDocument,
+    filters?: {
+      isActive?: boolean;
+      role?: OperatorRole;
+      limit?: number;
+      skip?: number;
+    },
+  ): Promise<OperatorDocument[]> {
     const query: Record<string, any> = {};
 
     if (filters?.isActive !== undefined) {
       query.isActive = filters.isActive;
     }
 
-    if (filters?.role) {
+    // Non-super_admin operators can only see roles strictly below their own
+    if (caller.role !== OperatorRole.SUPER_ADMIN) {
+      const allowedRoles = this.getRolesBelow(caller.role);
+      if (filters?.role) {
+        // If a specific role filter was requested, intersect with allowed roles
+        if (!allowedRoles.includes(filters.role)) {
+          return [];
+        }
+        query.role = filters.role;
+      } else {
+        query.role = { $in: allowedRoles };
+      }
+    } else if (filters?.role) {
       query.role = filters.role;
     }
 
@@ -80,7 +127,10 @@ export class OperatorsService {
       .exec();
   }
 
-  async findOne(id: string): Promise<OperatorDocument> {
+  async findOne(
+    id: string,
+    caller: OperatorDocument,
+  ): Promise<OperatorDocument> {
     const operator = await this.operatorModel
       .findById(id)
       .populate('zoneIds')
@@ -89,6 +139,11 @@ export class OperatorsService {
 
     if (!operator) {
       throw new NotFoundException(`Opérateur #${id} non trouvé`);
+    }
+
+    // Non-super_admin can only view operators with strictly lower role
+    if (caller.role !== OperatorRole.SUPER_ADMIN) {
+      this.assertRoleAbove(caller.role, operator.role, 'consulter');
     }
 
     return operator;
@@ -101,7 +156,26 @@ export class OperatorsService {
   async update(
     id: string,
     updateOperatorDto: UpdateOperatorDto,
+    caller?: OperatorDocument,
   ): Promise<OperatorDocument> {
+    // If a caller is provided, enforce role hierarchy
+    if (caller) {
+      const target = await this.operatorModel.findById(id).exec();
+      if (!target) {
+        throw new NotFoundException(`Opérateur #${id} non trouvé`);
+      }
+
+      // Can't modify operators at or above your role
+      if (caller.role !== OperatorRole.SUPER_ADMIN) {
+        this.assertRoleAbove(caller.role, target.role, 'modifier');
+      }
+
+      // Can't promote an operator to a role >= your own
+      if (updateOperatorDto.role) {
+        this.assertRoleAbove(caller.role, updateOperatorDto.role, 'attribuer ce rôle à');
+      }
+    }
+
     if (updateOperatorDto.email) {
       const existing = await this.operatorModel.findOne({
         email: updateOperatorDto.email.toLowerCase(),
@@ -135,11 +209,25 @@ export class OperatorsService {
     return operator;
   }
 
-  async remove(id: string): Promise<void> {
-    const result = await this.operatorModel.findByIdAndDelete(id).exec();
-    if (!result) {
+  async remove(id: string, caller: OperatorDocument): Promise<void> {
+    const target = await this.operatorModel.findById(id).exec();
+    if (!target) {
       throw new NotFoundException(`Opérateur #${id} non trouvé`);
     }
+
+    // Can't delete operators at or above your role
+    if (caller.role !== OperatorRole.SUPER_ADMIN) {
+      this.assertRoleAbove(caller.role, target.role, 'supprimer');
+    }
+
+    // Prevent self-deletion
+    if (caller._id.toString() === id) {
+      throw new ForbiddenException(
+        'Vous ne pouvez pas supprimer votre propre compte',
+      );
+    }
+
+    await this.operatorModel.findByIdAndDelete(id).exec();
   }
 
   async requestOtp(requestOtpDto: RequestOtpDto): Promise<{ message: string }> {

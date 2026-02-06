@@ -68,9 +68,15 @@ export class OperatorsController {
 
   @Post()
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
-  async create(@Body() createOperatorDto: CreateOperatorDto) {
-    const operator = await this.operatorsService.create(createOperatorDto);
+  @Roles(OperatorRole.ADMIN)
+  async create(
+    @Body() createOperatorDto: CreateOperatorDto,
+    @CurrentOperator() caller: OperatorDocument,
+  ) {
+    const operator = await this.operatorsService.create(
+      createOperatorDto,
+      caller,
+    );
     return {
       success: true,
       data: operator,
@@ -81,6 +87,7 @@ export class OperatorsController {
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
   @Roles(OperatorRole.ADMIN)
   async findAll(
+    @CurrentOperator() caller: OperatorDocument,
     @Query('isActive') isActive?: string,
     @Query('role') role?: OperatorRole,
     @Query('limit') limit?: string,
@@ -101,7 +108,7 @@ export class OperatorsController {
       filters.skip = parseInt(skip, 10);
     }
 
-    const operators = await this.operatorsService.findAll(filters);
+    const operators = await this.operatorsService.findAll(caller, filters);
     return {
       success: true,
       data: operators,
@@ -112,8 +119,11 @@ export class OperatorsController {
   @Get(':id')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
   @Roles(OperatorRole.ADMIN)
-  async findOne(@Param('id') id: string) {
-    const operator = await this.operatorsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentOperator() caller: OperatorDocument,
+  ) {
+    const operator = await this.operatorsService.findOne(id, caller);
     return {
       success: true,
       data: operator,
@@ -122,12 +132,17 @@ export class OperatorsController {
 
   @Put(':id')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
+  @Roles(OperatorRole.ADMIN)
   async update(
     @Param('id') id: string,
     @Body() updateOperatorDto: UpdateOperatorDto,
+    @CurrentOperator() caller: OperatorDocument,
   ) {
-    const operator = await this.operatorsService.update(id, updateOperatorDto);
+    const operator = await this.operatorsService.update(
+      id,
+      updateOperatorDto,
+      caller,
+    );
     return {
       success: true,
       data: operator,
@@ -136,19 +151,29 @@ export class OperatorsController {
 
   @Delete(':id')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
+  @Roles(OperatorRole.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.operatorsService.remove(id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentOperator() caller: OperatorDocument,
+  ) {
+    await this.operatorsService.remove(id, caller);
   }
 
   // ==================== ACTIVATION ENDPOINTS ====================
 
   @Put(':id/activate')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
-  async activate(@Param('id') id: string) {
-    const operator = await this.operatorsService.update(id, { isActive: true });
+  @Roles(OperatorRole.ADMIN)
+  async activate(
+    @Param('id') id: string,
+    @CurrentOperator() caller: OperatorDocument,
+  ) {
+    const operator = await this.operatorsService.update(
+      id,
+      { isActive: true },
+      caller,
+    );
     return {
       success: true,
       data: operator,
@@ -158,11 +183,16 @@ export class OperatorsController {
 
   @Put(':id/deactivate')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
-  async deactivate(@Param('id') id: string) {
-    const operator = await this.operatorsService.update(id, {
-      isActive: false,
-    });
+  @Roles(OperatorRole.ADMIN)
+  async deactivate(
+    @Param('id') id: string,
+    @CurrentOperator() caller: OperatorDocument,
+  ) {
+    const operator = await this.operatorsService.update(
+      id,
+      { isActive: false },
+      caller,
+    );
     return {
       success: true,
       data: operator,
@@ -174,12 +204,17 @@ export class OperatorsController {
 
   @Put(':id/zones')
   @UseGuards(OperatorJwtAuthGuard, RolesGuard)
-  @Roles(OperatorRole.SUPER_ADMIN)
+  @Roles(OperatorRole.ADMIN)
   async updateZones(
     @Param('id') id: string,
     @Body('zoneIds') zoneIds: string[],
+    @CurrentOperator() caller: OperatorDocument,
   ) {
-    const operator = await this.operatorsService.update(id, { zoneIds });
+    const operator = await this.operatorsService.update(
+      id,
+      { zoneIds },
+      caller,
+    );
     return {
       success: true,
       data: operator,
