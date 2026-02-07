@@ -27,7 +27,7 @@ export class ZoneAccessGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
     const userType = request.userType as 'operator' | 'agent';
-
+    
     if (!user || !userType) {
       throw new ForbiddenException('Authentification requise');
     }
@@ -52,8 +52,8 @@ export class ZoneAccessGuard implements CanActivate {
 
     // Fetch ticket to get parkingZoneId
     const ticket = await this.ticketsService.findOne(targetTicketId);
-    const ticketZoneId = ticket.parkingZoneId.toString();
-
+    const ticketZoneId = ticket.parkingZoneId
+    
     if (userType === 'operator') {
       return this.checkOperatorAccess(user, ticketZoneId);
     }
@@ -65,7 +65,7 @@ export class ZoneAccessGuard implements CanActivate {
     throw new ForbiddenException('Type d\'utilisateur non reconnu');
   }
 
-  private checkOperatorAccess(operator: any, ticketZoneId: string): boolean {
+  private checkOperatorAccess(operator: any, ticketZoneId: any): boolean {
     // Super admin has full access
     if (operator.role === OperatorRole.SUPER_ADMIN) {
       return true;
@@ -80,7 +80,9 @@ export class ZoneAccessGuard implements CanActivate {
       return z.toString();
     });
 
-    if (operatorZoneIds.includes(ticketZoneId)) {
+    const  ticketZoneIdStr = typeof ticketZoneId=== 'object' && ticketZoneId._id ? ticketZoneId._id.toString() : ticketZoneId.toString();  
+    
+    if (operatorZoneIds.includes(ticketZoneIdStr)) {
       return true;
     }
 
@@ -89,7 +91,7 @@ export class ZoneAccessGuard implements CanActivate {
     );
   }
 
-  private checkAgentAccess(agent: any, ticketZoneId: string): boolean {
+  private checkAgentAccess(agent: any, ticketZoneId: any): boolean {
     // Check if agent's assignedZones includes the ticket's parkingZoneId
     const agentZoneIds = (agent.assignedZones || []).map((z: Types.ObjectId | any) => {
       // Handle both populated and non-populated assignedZones
@@ -98,8 +100,8 @@ export class ZoneAccessGuard implements CanActivate {
       }
       return z.toString();
     });
-
-    if (agentZoneIds.includes(ticketZoneId)) {
+    const ticketZoneIdStr = typeof ticketZoneId === 'object' && ticketZoneId._id ? ticketZoneId._id.toString() : ticketZoneId.toString();
+    if (agentZoneIds.includes(ticketZoneIdStr)) {
       return true;
     }
 
