@@ -15,6 +15,8 @@ import { AgentsModule } from './agents/agents.module';
 import { StreetsModule } from './streets/streets.module';
 import { OperatorsModule } from './operators/operators.module';
 import { WalletModule } from './wallet/wallet.module';
+import { LicensePlateBadgesModule } from './license-plate-badges/license-plate-badges.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { WalletModule } from './wallet/wallet.module';
     StreetsModule,
     OperatorsModule,
     WalletModule,
+    LicensePlateBadgesModule,
+    VehiclesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
