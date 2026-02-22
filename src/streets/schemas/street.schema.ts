@@ -19,11 +19,23 @@ export class Street {
   })
   zoneId: Types.ObjectId;
 
-  @Prop({ required: true, enum: StreetType, index: true })
-  type: StreetType;
+  @Prop({ required: false, enum: StreetType })
+  type?: StreetType;
+
+  @Prop({ required: true, enum: StreetType })
+  leftType: StreetType;
+
+  @Prop({ required: true, enum: StreetType })
+  rightType: StreetType;
+
+  @Prop()
+  name?: string;
 
   @Prop({ required: true })
   encodedPolyline: string;
+
+  @Prop()
+  matchedEncodedPolyline?: string;
 
   @Prop({ default: true, index: true })
   isActive?: boolean;
@@ -36,4 +48,4 @@ export const StreetSchema = SchemaFactory.createForClass(Street);
 
 // Compound index for common queries
 StreetSchema.index({ zoneId: 1, isActive: 1 });
-StreetSchema.index({ zoneId: 1, type: 1 });
+StreetSchema.index({ zoneId: 1, leftType: 1, rightType: 1 });

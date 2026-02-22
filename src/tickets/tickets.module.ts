@@ -8,6 +8,7 @@ import { TicketTokensModule } from '../ticket-tokens/ticket-tokens.module';
 import { OperatorsModule } from '../operators/operators.module';
 import { AgentsModule } from '../agents/agents.module';
 import { ZoneAccessGuard } from '../shared/auth/zone-access.guard';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ZoneAccessGuard } from '../shared/auth/zone-access.guard';
     ConfigModule,
     OperatorsModule,
     AgentsModule,
+    StorageModule,
   ],
   controllers: [TicketsController],
   providers: [TicketsService, ZoneAccessGuard],

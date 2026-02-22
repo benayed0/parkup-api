@@ -13,11 +13,16 @@ import {
   Res,
   Req,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Response, Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { TicketsService } from './tickets.service';
 import { TicketTokensService } from '../ticket-tokens/ticket-tokens.service';
+import { CloudinaryStorageDriver } from '../storage/drivers/cloudinary.storage.driver';
 import { CombinedJwtAuthGuard } from '../shared/auth/combined-jwt-auth.guard';
 import { ZoneAccessGuard } from '../shared/auth/zone-access.guard';
 import { OperatorJwtAuthGuard } from '../operators/guards/operator-jwt-auth.guard';
@@ -40,10 +45,38 @@ export class TicketsController {
     private readonly ticketsService: TicketsService,
     private readonly ticketTokensService: TicketTokensService,
     private readonly configService: ConfigService,
+    private readonly cloudinaryDriver: CloudinaryStorageDriver,
   ) {
     this.clientBaseUrl =
       this.configService.get<string>('CLIENT_BASE_URL') ||
       'http://localhost:64372';
+  }
+
+  /**
+   * Upload a single evidence photo for a ticket (before ticket creation)
+   * POST /tickets/evidence/upload
+   * Field name: "photo" (multipart/form-data)
+   * Returns: { success: true, data: { url: string } }
+   */
+  @Post('evidence/upload')
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/')) {
+          return cb(new BadRequestException('Only image files are allowed'), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadEvidence(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const url = await this.cloudinaryDriver.uploadBuffer(file.buffer, {
+      folder: 'tickets/evidence',
+      resourceType: 'image',
+    });
+    return { success: true, data: { url } };
   }
 
   /**

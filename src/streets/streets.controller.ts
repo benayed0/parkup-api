@@ -63,10 +63,18 @@ export class StreetsController {
     };
   }
 
+  @Post('match-preview')
+  @UseGuards(OperatorJwtAuthGuard)
+  async matchPreview(@Body() body: { encodedPolyline: string }) {
+    return this.streetsService.matchPreview(body.encodedPolyline);
+  }
+
   @Get()
   async findAll(
     @Query('zoneId') zoneId?: string,
     @Query('type') type?: StreetType,
+    @Query('leftType') leftType?: StreetType,
+    @Query('rightType') rightType?: StreetType,
     @Query('isActive') isActive?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
@@ -74,6 +82,8 @@ export class StreetsController {
     const streets = await this.streetsService.findAll({
       zoneId,
       type,
+      leftType,
+      rightType,
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       skip: skip ? parseInt(skip, 10) : undefined,
@@ -92,6 +102,8 @@ export class StreetsController {
     @Req() req: any,
     @Query('zoneId') zoneId?: string,
     @Query('type') type?: StreetType,
+    @Query('leftType') leftType?: StreetType,
+    @Query('rightType') rightType?: StreetType,
     @Query('isActive') isActive?: string,
     @Query('limit') limit?: string,
     @Query('skip') skip?: string,
@@ -123,6 +135,8 @@ export class StreetsController {
       zoneId: zoneIds ? undefined : zoneId,
       zoneIds,
       type,
+      leftType,
+      rightType,
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
       skip: skip ? parseInt(skip, 10) : undefined,

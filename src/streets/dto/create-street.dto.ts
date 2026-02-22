@@ -15,7 +15,15 @@ export class CreateStreetDto {
 
   @IsEnum(StreetType)
   @IsNotEmpty()
-  type: StreetType;
+  leftType: StreetType;
+
+  @IsEnum(StreetType)
+  @IsNotEmpty()
+  rightType: StreetType;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -24,4 +32,8 @@ export class CreateStreetDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsString()
+  matchedEncodedPolyline?: string;
 }

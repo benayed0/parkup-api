@@ -4,6 +4,7 @@ import { StreetsService } from './streets.service';
 import { StreetsController } from './streets.controller';
 import { Street, StreetSchema } from './schemas/street.schema';
 import { OperatorsModule } from '../operators/operators.module';
+import { MapMatchingService } from './map-matching.service';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { OperatorsModule } from '../operators/operators.module';
     OperatorsModule,
   ],
   controllers: [StreetsController],
-  providers: [StreetsService],
+  providers: [StreetsService, MapMatchingService],
   exports: [StreetsService],
 })
 export class StreetsModule {}
